@@ -66,6 +66,7 @@ class PeopleRippleSources {
       let p=this.people.get(id);
       if(!p){p={id,x,y,targetX:x,targetY:y,lastX:x,lastY:y,motionX:x,motionY:y,lastMotion:now,lastTrail:-1,stepSide:1,seen:now,confidence:1,speed:0,settled:0};this.people.set(id,p);}
       p.targetX=x;p.targetY=y;p.seen=now;p.confidence=Number.isFinite(person.confidence)?Math.max(0,Math.min(1,person.confidence)):1;
+      p.jumping=person.jumping===true;
     }
     for(const[id,p]of this.people)if(!seen.has(id))p.confidence=0;
   }
@@ -77,6 +78,7 @@ class PeopleRippleSources {
       const alpha=1-Math.exp(-dt/.15),oldX=p.x,oldY=p.y;
       p.x+=(p.targetX-p.x)*alpha;p.y+=(p.targetY-p.y)*alpha;
       if(!enabled||p.confidence<.25){p.lastX=p.x;p.lastY=p.y;p.motionX=p.x;p.motionY=p.y;p.lastMotion=now;p.speed=0;continue;}
+      if(p.jumping){p.lastX=p.x;p.lastY=p.y;p.motionX=p.x;p.motionY=p.y;p.lastMotion=now;p.speed=0;p.settled*=Math.exp(-dt/.2);continue;}
       const speed=Math.min(.8,Math.hypot((p.x-oldX)*16/9,p.y-oldY)/Math.max(.001,dt));
       p.speed+=(speed-p.speed)*(1-Math.exp(-dt/.4));
       // A position deadband allows a stationary person's box to wobble without

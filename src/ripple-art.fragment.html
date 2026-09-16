@@ -28,6 +28,7 @@
       <button class="btn btn-ghost sf-install" type="button" data-action="mic" hidden>Use microphone</button>
       <button class="btn btn-ghost sf-install" type="button" data-action="camera" hidden>Use camera</button>
       <button class="btn btn-ghost sf-install" type="button" data-action="people-demo" hidden>Try tracking demo</button>
+      <button class="btn btn-ghost sf-install" type="button" data-action="jump-demo" hidden>Try jump demo</button>
     </div>
     <div class="sf-sliders">
       <label class="form-label">Wave speed · <output data-value="speed">45%</output>
@@ -49,7 +50,8 @@
   (()=>{
     {{PHYSICS}}
     {{TRACKING}}
-    window.StillFieldTracking={PersonTracker,PeopleRippleSources,trackingDemo};
+    {{JUMP_TRACKING}}
+    window.StillFieldTracking={PersonTracker,PeopleRippleSources,trackingDemo,JumpDetector,jumpingDemo};
     const root=document.getElementById('still-field-art'),canvas=root.querySelector('canvas');
     const image=root.querySelector('.sf-stage img'),seedImage=root.querySelector('[data-seed]');
     const status=root.querySelector('[role="status"]'),pause=root.querySelector('[data-action="pause"]');
@@ -133,8 +135,13 @@
     }
     function resize(){const box=canvas.getBoundingClientRect(),scale=Math.min(devicePixelRatio||1,maxWidth/Math.max(1,box.width));const w=Math.max(1,Math.round(box.width*scale)),h=Math.max(1,Math.round(box.height*scale));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);}}
     new ResizeObserver(resize).observe(canvas);resize();
-    window.StillField={configure,setInputs,triggerWake:disturb,disturb,setPeople(people){if(Array.isArray(people)){peopleInput=true;peopleSources.update(people,performance.now()/1000);}},clearPeople(){peopleInput=false;peopleSources.clear();},getPeople(){return peopleSources.positions();},pause(){playing=false;pauseLabel();},play(){playing=true;last=performance.now();pauseLabel();},getState(){return{playing,ready,time:clock,...target};},setQuality(width){if(Number.isFinite(width)){maxWidth=Math.max(640,Math.min(3840,width));resize();}},setLiveReader(reader){liveReader=typeof reader==='function'?reader:null;root.querySelector('[data-control="activity"]').disabled=!!liveReader;if(liveReader)root.querySelector('[data-value="activity"]').textContent='Live loudness';else updateControl('activity');}};
+    window.StillField={configure,setInputs,triggerWake:disturb,disturb,jumpImpact,setPeople(people){if(Array.isArray(people)){peopleInput=true;peopleSources.update(people,performance.now()/1000);}},clearPeople(){peopleInput=false;peopleSources.clear();},getPeople(){return peopleSources.positions();},pause(){playing=false;pauseLabel();},play(){playing=true;last=performance.now();pauseLabel();},getState(){return{playing,ready,time:clock,...target};},setQuality(width){if(Number.isFinite(width)){maxWidth=Math.max(640,Math.min(3840,width));resize();}},setLiveReader(reader){liveReader=typeof reader==='function'?reader:null;root.querySelector('[data-control="activity"]').disabled=!!liveReader;if(liveReader)root.querySelector('[data-value="activity"]').textContent='Live loudness';else updateControl('activity');}};
     window.addEventListener('still-field-input',e=>setInputs(e.detail));
+    function jumpImpact(x,y,strength,touch){
+      if(!playing||originalView)return;
+      disturb(x,y,strength,touch);
+      if(touch?.kind==='landing')status.textContent='Landing · one broad ripple. It softens as the surface settles.';
+    }
     function load(){
       if(ready||!image.complete||!image.naturalWidth||!seedImage.complete||!seedImage.naturalWidth)return;
       const temp=document.createElement('canvas');temp.width=2048;temp.height=1024;const ctx=temp.getContext('2d',{willReadFrequently:true});ctx.drawImage(image,0,0,2048,1024);

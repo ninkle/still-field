@@ -9,10 +9,12 @@
       <select id="sf-camera-anchor"><option value="feet">Feet / full body</option><option value="center">Body center / cropped view</option></select>
     </label>
     <label><input type="checkbox" id="sf-camera-preview" checked> Show camera preview</label>
+    <label><input type="checkbox" id="sf-camera-jumps" checked> Detect jumps · full body</label>
   </div>
   <div class="sf-camera-view">
     <video id="sf-camera-video" autoplay muted playsinline hidden></video>
     <canvas id="sf-camera-overlay" width="640" height="360" role="img" aria-label="Mirrored camera preview with detected people and ripple source positions"></canvas>
   </div>
   <p class="sf-camera-help">Frame the full person for feet placement. The marked points map to the same positions on the artwork. Frames stay on this device and are not recorded.</p>
+  <p class="sf-camera-help">For jumps, keep the camera fixed with head and feet visible. Stand briefly before jumping in place. A clear landing creates one broad ripple. Jump detection is unavailable in the cropped-body view.</p>
 </section>

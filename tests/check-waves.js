@@ -85,3 +85,12 @@ for(const speed of [0,1]){
  assert(Math.max(...busy.impacts.current.map(Math.abs))<4,'A busy room remains bounded at the speed extremes');
 }
 console.log('Aging footsteps, breathing transitions, empty-room stillness and busy-room stability passed.');
+
+const landings=new Field.RippleScene(96,54);
+for(let i=0;i<3600;i++){
+ if(i%45===0)for(let person=0;person<4;person++)landings.disturb(.18+person*.21,.35+(person%2)*.25,2.2/2,16);
+ landings.step(1,0);
+}
+assert(landings.impacts.current.every(Number.isFinite));
+assert(Math.max(...landings.impacts.current.map(Math.abs))<4,'Repeated broad landings stay stable at maximum speed and minimum damping');
+console.log('Repeated landing-ripple stability passed.');

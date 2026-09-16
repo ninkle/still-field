@@ -1,5 +1,6 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const {PersonTracker,trackingDemo}=require('../src/person-tracking.js');
+const {JumpDetector,jumpingDemo}=require('../src/jump-tracking.js');
 class Element{
  constructor(){this.listeners={};this.checked=true;this.value='feet';this.hidden=true;this.width=640;this.height=360;this.videoWidth=640;this.videoHeight=360;this.readyState=2;this.textContent='';}
  addEventListener(type,fn){this.listeners[type]=fn;}
@@ -13,7 +14,7 @@ element('sf-camera-assets').textContent=JSON.stringify({model:{modelTopology:{},
 let cameraCalls=0,resolveCamera,stops=0,clearCalls=0,lastConstraints;
 const mediaTrack={stop(){stops++;},addEventListener(){}};
 const stream={getTracks:()=>[mediaTrack],getVideoTracks:()=>[mediaTrack]};
-const art={setPeople(){},clearPeople(){clearCalls++;}};
+const art={setPeople(){},clearPeople(){clearCalls++;},jumpImpact(){}};
 const context={console,performance,TextDecoder,Uint8Array,atob,PersonTracker,
   document:{getElementById:element,createElement:()=>new Element(),head:{appendChild(){}},fullscreenElement:null,hidden:false},
   navigator:{mediaDevices:{getUserMedia(constraints){lastConstraints=constraints;cameraCalls++;return new Promise(r=>resolveCamera=r);}}},
@@ -21,7 +22,7 @@ const context={console,performance,TextDecoder,Uint8Array,atob,PersonTracker,
   tf:{setBackend:async()=>{},ready:async()=>{},io:{fromMemory:a=>a}},
   cocoSsd:{load:async()=>({detect:async()=>[]})},
 };
-context.window={StillField:art,StillFieldTracking:{PersonTracker,trackingDemo},StillFieldSettings:{get:key=>key==='cameraDevice'?'selected-logitech':false,refreshDevices(){}},tf:context.tf,cocoSsd:context.cocoSsd,addEventListener(){}};
+context.window={StillField:art,StillFieldTracking:{PersonTracker,trackingDemo,JumpDetector,jumpingDemo},StillFieldSettings:{get:key=>key==='cameraDevice'?'selected-logitech':false,refreshDevices(){}},tf:context.tf,cocoSsd:context.cocoSsd,addEventListener(){}};
 vm.runInNewContext(fs.readFileSync('src/camera-controller.js','utf8'),context);
 const flush=()=>new Promise(setImmediate),button=element('[data-action="camera"]');
 (async()=>{
@@ -40,5 +41,14 @@ const flush=()=>new Promise(setImmediate),button=element('[data-action="camera"]
  assert.equal(cameraCalls,callsBeforeDemo,'The movement/settling demo never obtains a camera stream');
  assert.match(element('sf-camera-status').textContent,/Slow and brisk walking/);
  await element('[data-action="people-demo"]').emit('click');
+ await element('[data-action="jump-demo"]').emit('click');
+ assert.equal(cameraCalls,callsBeforeDemo,'The jump demo never obtains a camera stream');
+ assert.match(element('sf-camera-status').textContent,/Stand briefly/);
+ await element('[data-action="jump-demo"]').emit('click');
+ element('sf-camera-anchor').value='center';element('sf-camera-anchor').emit('change');
+ assert.equal(element('sf-camera-jumps').disabled,true,'Cropped-body mode disables jump detection');
+ await element('[data-action="jump-demo"]').emit('click');
+ assert.match(element('sf-camera-status').textContent,/select Feet/);
+ await element('[data-action="jump-demo"]').emit('click');
  console.log('Camera stays off initially; cancellation releases late streams; stop releases the camera, clears video and removes ripple sources.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

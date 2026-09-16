@@ -1,11 +1,11 @@
 (()=>{
   const art=window.StillField;if(!art)return;
   const key='still-field-installation-v1',root=document.getElementById('still-field-art');
-  const defaults={speed:.58,damping:.04,motion:.75,activity:.2,quality:2560,mirror:true,anchor:'feet',preview:true,cameraDevice:'',micDevice:'',autoCamera:false,micGain:1};
+  const defaults={speed:.58,damping:.04,motion:.75,activity:.2,quality:2560,mirror:true,anchor:'feet',preview:true,jumps:true,cameraDevice:'',micDevice:'',autoCamera:false,micGain:1};
   let saved={};try{saved=JSON.parse(localStorage.getItem(key)||'{}')||{};}catch{}
   const values={...defaults};
   for(const k of ['speed','damping','motion','activity'])if(Number.isFinite(saved[k]))values[k]=Math.max(0,Math.min(1,saved[k]));
-  for(const k of ['mirror','preview','autoCamera'])if(typeof saved[k]==='boolean')values[k]=saved[k];
+  for(const k of ['mirror','preview','autoCamera','jumps'])if(typeof saved[k]==='boolean')values[k]=saved[k];
   for(const k of ['cameraDevice','micDevice'])if(typeof saved[k]==='string')values[k]=saved[k];
   if([1920,2560,3840].includes(saved.quality))values.quality=saved.quality;
   if([.6,1,1.7].includes(saved.micGain))values.micGain=saved.micGain;
@@ -16,7 +16,7 @@
   const byId=id=>document.getElementById(id);
   art.configure(values);art.setQuality(values.quality);
   root.querySelectorAll('input[data-control]').forEach(el=>el.addEventListener('input',()=>set(el.dataset.control,Number(el.value)/100)));
-  const controls={quality:'sf-quality',micGain:'sf-mic-gain',mirror:'sf-camera-mirror',anchor:'sf-camera-anchor',preview:'sf-camera-preview',autoCamera:'sf-auto-camera'};
+  const controls={quality:'sf-quality',micGain:'sf-mic-gain',mirror:'sf-camera-mirror',anchor:'sf-camera-anchor',preview:'sf-camera-preview',autoCamera:'sf-auto-camera',jumps:'sf-camera-jumps'};
   for(const[name,id]of Object.entries(controls)){
     const el=byId(id),boolean=typeof values[name]==='boolean';
     if(boolean)el.checked=values[name];else el.value=String(values[name]);

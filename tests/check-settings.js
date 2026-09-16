@@ -1,5 +1,5 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
-let stored=JSON.stringify({speed:.7,quality:3840,cameraDevice:'unplugged-logitech',mirror:false,autoCamera:false});
+let stored=JSON.stringify({speed:.7,quality:3840,cameraDevice:'unplugged-logitech',mirror:false,autoCamera:false,jumps:false});
 class Element{
  constructor(){this.listeners={};this.value='';this.checked=false;this.options=[];this.dataset={};}
  addEventListener(type,fn){this.listeners[type]=fn;}
@@ -22,6 +22,9 @@ vm.runInNewContext(fs.readFileSync('src/installation-settings.js','utf8'),contex
  assert.equal(configured.speed,.7);assert.equal(quality,3840);
  assert.equal(element('sf-camera-mirror').checked,false);
  assert.equal(element('sf-auto-camera').checked,false);
+ assert.equal(element('sf-camera-jumps').checked,false);
+ element('sf-camera-jumps').checked=true;element('sf-camera-jumps').emit('change');
+ assert.equal(JSON.parse(stored).jumps,true,'Jump detection preference is saved');
  assert.equal(element('sf-camera-device').value,'unplugged-logitech','Unavailable saved input must not silently switch cameras');
  assert(element('sf-camera-device').options.some(o=>/unavailable/.test(o.text)));
  slider.value='61';slider.emit('input');assert.equal(JSON.parse(stored).speed,.61);

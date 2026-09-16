@@ -40,7 +40,15 @@ You can also double-click `start.command` in Finder. It opens a dedicated Chrome
 
 For the 55-inch Frame, select a **3840 × 2160, 16:9** Mac display output if available. Begin with **1440p · balanced** internal render detail, which is scaled to the TV, then try **4K · highest detail** while the camera is running. The renderer targets roughly 30 frames/second. The original image is 2400 × 1350, so native 4K output does not create new photographic detail. Tune TV brightness and its own auto-off settings for the office.
 
-The current player uses **one camera**, accepting up to eight short-lived person tracks. A 1,000 sq ft room may have occluded areas; test the intended walking area before choosing a permanent mount. Detection runs at up to four updates/second, with smoothed positions. Footsteps are artistic impacts derived from movement, not measured individual foot contacts. Crossing/occluded people can change track IDs.
+The current player uses **one camera**, accepting up to eight short-lived person tracks. A 1,000 sq ft room may have occluded areas; test the intended walking area before choosing a permanent mount. Detection targets ten updates/second when jump detection is enabled in full-body mode, and four otherwise; actual speed depends on the Mac and render quality. Footsteps are artistic impacts derived from movement, not measured individual foot contacts. Crossing/occluded people can change track IDs.
+
+## Jumping in place
+
+Use **Feet / full body** and leave **Detect jumps · full body** checked in Camera alignment. Keep the camera fixed and the person's head and feet fully visible, with enough image detail to track the whole body. Stand briefly (about a second) before jumping in place. A clear rise produces a small takeoff disturbance; returning to the same standing height produces one broader, stronger landing ripple. Walking footsteps and standing breaths are suppressed during the jump. Repeated landings remain distinct and their strength is capped.
+
+This is a conservative detector of whole-body bounding-box motion, not a pose or foot-contact model. It checks for multiple raised samples followed by a descent and return. It rejects cropped or overlapping people, low confidence, long sample gaps, and incomplete jumps. Arm raises and crouches with the feet remaining grounded do not qualify in the synthetic tests. Real detection can still miss jumps or misinterpret motion; validate it with the installation camera. Jump detection is disabled in **Body center / cropped view**. Uncheck it to return to the lighter four-update/second tracking rate.
+
+**Try jump demo** runs three synthetic jumps through the same tracking and jump-detection code without opening the camera. It loops every 14 seconds. A landing status appears below the artwork controls. Pause stops the visual impacts; missed events are not replayed on resume.
 
 ## Optional sound
 

@@ -31,6 +31,7 @@ def build(destination=None):
         'SEED': 'data:image/png;base64,' + encoded(ROOT / 'assets/ripple-seed.png'),
         'PHYSICS': (source / 'wave-physics.js').read_text(),
         'TRACKING': (source / 'person-tracking.js').read_text(),
+        'JUMP_TRACKING': (source / 'jump-tracking.js').read_text(),
     }.items():
         artwork = artwork.replace('{{' + key + '}}', value)
     page = (source / 'installation-shell.html').read_text()
