@@ -1,8 +1,12 @@
 # Still Field
 
-Interactive ripple artwork for a Mac mini and a 16:9 Samsung Frame display. A warm, softer rendering of the original image carries a slow central ripple, while camera positions add distinct standing pulses and stronger alternating footsteps. Optional microphone loudness changes the field's energy.
+Interactive ripple artwork for a Mac mini and a 16:9 Samsung Frame display. A warm, softer rendering of the original image carries a slow central ripple, while camera positions add breathing ripples and distinct alternating footsteps. Optional microphone loudness changes the field's energy.
 
-The central ripple runs on its own slow clock, with roughly a 20-second cycle and restrained amplitude. Camera footsteps retain their responsive speed and are just over twice their original strength; standing pulses are 50% stronger. The material's contrast is reduced by 32%, with lifted shadows and a subtle warm tint. **View original** still shows the ungraded source. Existing camera, microphone and display settings are preserved when updating.
+The central ripple runs on its own slow clock, with roughly a 20-second cycle and restrained amplitude. The material's contrast is reduced by 32%, with lifted shadows and a subtle warm tint. **View original** still shows the ungraded source. Existing camera, microphone and display settings are preserved when updating.
+
+Footsteps begin as distinct impressions, expand into rings, and soften into broader swells as fine detail dissipates. Slow movement produces wider, gentler steps; brisk movement produces tighter, stronger steps, with capped strength and reduced intensity in a crowd. This follows smoothed movement in the camera image, not measured physical walking speed.
+
+After a person stops for a few seconds, their steps settle into a broad ripple with a nine-second breathing cycle. It fades smoothly when they leave. With camera tracking active and nobody detected, the central ripple approaches stillness over roughly 30–45 seconds, then gently wakes when someone returns. Without an active camera or tracking demo, the autonomous artwork continues its usual quiet motion. Damping still adjusts how long input ripples remain; fine detail softens even at low damping.
 
 The artwork, JavaScript detector and model weights are included in this repository. After cloning, the player builds and runs offline with Python's standard library. There is no npm install, pip install, cloud inference or runtime CDN download.
 
@@ -110,7 +114,7 @@ python3 scripts/check.py
 
 Checks additionally require **Node 18+** but no npm packages. They cover wave propagation/interference/stability, tracking and footstep cadence, saved settings, selected devices, cancellation and input cleanup, server origin/host validation, and packaged JavaScript syntax. Live camera accuracy, sustained FPS, HDMI behavior and login startup must be verified on the installation Mac.
 
-For a synthetic test, use **Try tracking demo**. It shows one standing and one moving simulated person; no camera stream is obtained. **Walk past** previews a short footstep trail, and **View original** compares with the starting image.
+For a synthetic test, use **Try tracking demo**. Its 66-second cycle shows slow and brisk walking, people settling, departure, and an empty room becoming still; no camera stream is obtained. **Walk past** previews a short footstep trail, and **View original** compares with the starting image.
 
 The optional loopback sensor bridge can be enabled by opening `/?sensors=1`. Send normalized values with a local adapter:
 

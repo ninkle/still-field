@@ -49,7 +49,7 @@
   (()=>{
     {{PHYSICS}}
     {{TRACKING}}
-    window.StillFieldTracking={PersonTracker,PeopleRippleSources};
+    window.StillFieldTracking={PersonTracker,PeopleRippleSources,trackingDemo};
     const root=document.getElementById('still-field-art'),canvas=root.querySelector('canvas');
     const image=root.querySelector('.sf-stage img'),seedImage=root.querySelector('[data-seed]');
     const status=root.querySelector('[role="status"]'),pause=root.querySelector('[data-action="pause"]');
@@ -97,14 +97,14 @@
     gl.uniform2f(u.texel,1/field.width,1/field.height);
     const target={speed:.45,damping:.28,motion:.65,activity:.2,light:.5};
     const state={...target};
-    let ready=false,originalView=false,liveReader=null,walk=-1,walkTick=0,walkSide=1,pointerTick=-10;
+    let ready=false,originalView=false,liveReader=null,walk=-1,walkTick=0,walkSide=1,pointerTick=-10,peopleInput=false;
     let clock=0,accumulator=0,last=performance.now(),drawTime=0,externalUntil=0,soundPrevious=.2,soundCooldown=0;
     const reduced=matchMedia('(prefers-reduced-motion: reduce)');let playing=!reduced.matches;
     function pauseLabel(){pause.textContent=playing?'Pause':'Play';pause.setAttribute('aria-pressed',String(!playing));}
     pauseLabel();
     function updateControl(key){const input=root.querySelector('[data-control="'+key+'"]'),out=root.querySelector('[data-value="'+key+'"]');if(input)input.value=Math.round(target[key]*100);if(out)out.textContent=Math.round(target[key]*100)+'%';}
     root.querySelectorAll('input[type="range"]').forEach(input=>input.addEventListener('input',()=>{target[input.dataset.control]=Number(input.value)/100;updateControl(input.dataset.control);}));
-    function disturb(x=.5,y=.5,amount=.85){if(!ready)return;field.disturb(x,y,amount*(.45+target.motion),8);}
+    function disturb(x=.5,y=.5,amount=.85,touch){if(!ready)return;field.disturb(x,y,amount*(.45+target.motion),touch?.radius??8);}
     pause.addEventListener('click',()=>{playing=!playing;last=performance.now();accumulator=0;pauseLabel();});
     reduced.addEventListener('change',e=>{if(e.matches){playing=false;pauseLabel();}});
     root.querySelector('[data-action="original"]').addEventListener('click',e=>{originalView=!originalView;e.currentTarget.setAttribute('aria-pressed',String(originalView));e.currentTarget.textContent=originalView?'Return to ripples':'View original';});
@@ -133,7 +133,7 @@
     }
     function resize(){const box=canvas.getBoundingClientRect(),scale=Math.min(devicePixelRatio||1,maxWidth/Math.max(1,box.width));const w=Math.max(1,Math.round(box.width*scale)),h=Math.max(1,Math.round(box.height*scale));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);}}
     new ResizeObserver(resize).observe(canvas);resize();
-    window.StillField={configure,setInputs,triggerWake:disturb,disturb,setPeople(people){if(Array.isArray(people))peopleSources.update(people,performance.now()/1000);},clearPeople(){peopleSources.clear();},getPeople(){return peopleSources.positions();},pause(){playing=false;pauseLabel();},play(){playing=true;last=performance.now();pauseLabel();},getState(){return{playing,ready,time:clock,...target};},setQuality(width){if(Number.isFinite(width)){maxWidth=Math.max(640,Math.min(3840,width));resize();}},setLiveReader(reader){liveReader=typeof reader==='function'?reader:null;root.querySelector('[data-control="activity"]').disabled=!!liveReader;if(liveReader)root.querySelector('[data-value="activity"]').textContent='Live loudness';else updateControl('activity');}};
+    window.StillField={configure,setInputs,triggerWake:disturb,disturb,setPeople(people){if(Array.isArray(people)){peopleInput=true;peopleSources.update(people,performance.now()/1000);}},clearPeople(){peopleInput=false;peopleSources.clear();},getPeople(){return peopleSources.positions();},pause(){playing=false;pauseLabel();},play(){playing=true;last=performance.now();pauseLabel();},getState(){return{playing,ready,time:clock,...target};},setQuality(width){if(Number.isFinite(width)){maxWidth=Math.max(640,Math.min(3840,width));resize();}},setLiveReader(reader){liveReader=typeof reader==='function'?reader:null;root.querySelector('[data-control="activity"]').disabled=!!liveReader;if(liveReader)root.querySelector('[data-value="activity"]').textContent='Live loudness';else updateControl('activity');}};
     window.addEventListener('still-field-input',e=>setInputs(e.detail));
     function load(){
       if(ready||!image.complete||!image.naturalWidth||!seedImage.complete||!seedImage.naturalWidth)return;
@@ -152,6 +152,7 @@
       if(!ready||document.hidden)return;
       if(inlinePeopleDemo)peopleSources.update([{id:'walking',x:.8-(.5-.5*Math.cos(clock*.38))*.52,y:.21,confidence:1},{id:'standing',x:.25,y:.26,confidence:1}],now/1000);
       peopleSources.tick(elapsed,now/1000,disturb,playing&&!originalView);
+      field.setPeople(peopleSources.positions(),peopleInput||inlinePeopleDemo);
       if(playing){
         if(liveReader){const val=liveReader();if(Number.isFinite(val))target.activity=Math.max(0,Math.min(1,val));}
         if(externalUntil&&now>externalUntil){target.activity=.2;target.light=.5;externalUntil=0;if(!liveReader)updateControl('activity');}
@@ -160,7 +161,7 @@
         // the wavemaker's energy and slightly changes propagation speed.
         if(liveReader&&target.activity-soundPrevious>.12&&clock>soundCooldown){disturb(.513,.432,.8+target.activity*.6);soundCooldown=clock+.7;}
         soundPrevious+=(target.activity-soundPrevious)*(1-Math.exp(-elapsed/1.2));
-        if(walk>=0){walk+=elapsed;if(walk-walkTick>=FOOTSTEP_CADENCE){emitFootstep(disturb,.15+Math.min(1,walk/6)*.7,.44,1,0,walkSide);walkSide*=-1;walkTick=walk;}if(walk>6)walk=-1;}
+        if(walk>=0){walk+=elapsed;const pace=.7/6*16/9;if(walk-walkTick>=movementTouch(pace).cadence){emitFootstep(disturb,.15+Math.min(1,walk/6)*.7,.44,1,0,walkSide,1,pace);walkSide*=-1;walkTick=walk;}if(walk>6)walk=-1;}
         clock+=elapsed;accumulator+=elapsed;
         while(accumulator>=1/60){field.step(Math.min(1,state.speed+(state.activity-.2)*.16),state.damping,state.activity);accumulator-=1/60;}
       }

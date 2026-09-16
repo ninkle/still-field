@@ -1,5 +1,5 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
-const {PersonTracker}=require('../src/person-tracking.js');
+const {PersonTracker,trackingDemo}=require('../src/person-tracking.js');
 class Element{
  constructor(){this.listeners={};this.checked=true;this.value='feet';this.hidden=true;this.width=640;this.height=360;this.videoWidth=640;this.videoHeight=360;this.readyState=2;this.textContent='';}
  addEventListener(type,fn){this.listeners[type]=fn;}
@@ -21,7 +21,7 @@ const context={console,performance,TextDecoder,Uint8Array,atob,PersonTracker,
   tf:{setBackend:async()=>{},ready:async()=>{},io:{fromMemory:a=>a}},
   cocoSsd:{load:async()=>({detect:async()=>[]})},
 };
-context.window={StillField:art,StillFieldTracking:{PersonTracker},StillFieldSettings:{get:key=>key==='cameraDevice'?'selected-logitech':false,refreshDevices(){}},tf:context.tf,cocoSsd:context.cocoSsd,addEventListener(){}};
+context.window={StillField:art,StillFieldTracking:{PersonTracker,trackingDemo},StillFieldSettings:{get:key=>key==='cameraDevice'?'selected-logitech':false,refreshDevices(){}},tf:context.tf,cocoSsd:context.cocoSsd,addEventListener(){}};
 vm.runInNewContext(fs.readFileSync('src/camera-controller.js','utf8'),context);
 const flush=()=>new Promise(setImmediate),button=element('[data-action="camera"]');
 (async()=>{
@@ -36,5 +36,9 @@ const flush=()=>new Promise(setImmediate),button=element('[data-action="camera"]
  assert.equal(button.textContent,'Stop camera');
  await button.emit('click');assert.equal(stops,2);assert(clearCalls>0);
  assert.equal(element('sf-camera-video').srcObject,null);
+ const callsBeforeDemo=cameraCalls;await element('[data-action="people-demo"]').emit('click');
+ assert.equal(cameraCalls,callsBeforeDemo,'The movement/settling demo never obtains a camera stream');
+ assert.match(element('sf-camera-status').textContent,/Slow and brisk walking/);
+ await element('[data-action="people-demo"]').emit('click');
  console.log('Camera stays off initially; cancellation releases late streams; stop releases the camera, clears video and removes ripple sources.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

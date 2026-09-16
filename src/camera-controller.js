@@ -1,6 +1,6 @@
 (()=>{
   const art=window.StillField;if(!art)return;
-  const {PersonTracker}=window.StillFieldTracking;
+  const {PersonTracker,trackingDemo}=window.StillFieldTracking;
   const settings=window.StillFieldSettings;
   const root=document.getElementById('still-field-art'),button=root.querySelector('[data-action="camera"]');
   const demoButton=root.querySelector('[data-action="people-demo"]');
@@ -109,9 +109,9 @@
     const generation=++run;
     function stepDemo(){
       if(generation!==run||!active)return;const now=performance.now()/1000,t=now-demoStart;
-      const x=.10+.52*(.5-.5*Math.cos(t*.38));
-      const predictions=[{class:'person',score:.98,bbox:[x*640,.20*360,.12*640,.62*360]},{class:'person',score:.97,bbox:[.68*640,.34*360,.13*640,.42*360]}];
-      report(tracker.update(predictions,640,360,now));timer=setTimeout(stepDemo,100);
+      const sample=trackingDemo(t);
+      report(tracker.update(sample.predictions,640,360,now));
+      status.textContent=`Demo · ${sample.label}`;timer=setTimeout(stepDemo,100);
     }
     stepDemo();draw();
   });
