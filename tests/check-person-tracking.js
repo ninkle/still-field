@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict');
-const {PersonTracker,PeopleRippleSources,emitFootstep,FOOTSTEP_CADENCE}=require('../src/person-tracking.js');
+const {PersonTracker,PeopleRippleSources,emitFootstep,FOOTSTEP_CADENCE,FOOTSTEP_STRENGTH}=require('../src/person-tracking.js');
 const person=(x,y=.2)=>({class:'person',score:.95,bbox:[x*640,y*360,80,210]});
 const t=new PersonTracker();
 assert.equal(t.update([person(.1),person(.65)],640,360,0).length,0);
@@ -33,7 +33,7 @@ for(const fps of [15,30,60]){
  for(let i=0;i<fps*4;i++){
   const now=i/fps;
   if(i%Math.max(1,Math.round(fps/4))===0)gait.update([{id:'walker',x:.2+now*.12,y:.5}],now);
-  gait.tick(1/fps,now,(x,y,strength)=>{if(Math.abs(strength-.7)<1e-9)steps.push({x,y,now});});
+  gait.tick(1/fps,now,(x,y,strength)=>{if(Math.abs(strength-FOOTSTEP_STRENGTH)<1e-9)steps.push({x,y,now});});
  }
  assert(steps.length>=8&&steps.length<=12,`Expected a walking cadence at ${fps} fps`);
  for(let i=1;i<steps.length;i++){
@@ -46,7 +46,7 @@ const jitter=new PeopleRippleSources(),jitterSteps=[];
 for(let i=0;i<360;i++){
  const now=i/60;
  if(i%15===0)jitter.update([{id:'standing',x:.5+Math.sin(i)*.006,y:.5+Math.cos(i)*.006}],now);
- jitter.tick(1/60,now,(x,y,strength)=>{if(strength===.7)jitterSteps.push([x,y]);});
+ jitter.tick(1/60,now,(x,y,strength)=>{if(strength===FOOTSTEP_STRENGTH)jitterSteps.push([x,y]);});
 }
 assert.equal(jitterSteps.length,0,'Stationary detection jitter should not create footsteps');
 const vertical=[];emitFootstep((...p)=>vertical.push(p),.5,.5,0,1,1);emitFootstep((...p)=>vertical.push(p),.5,.6,0,1,-1);

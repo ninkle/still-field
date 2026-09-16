@@ -72,8 +72,11 @@
         // Keep the material anchored. Replace the measured ring component with
         // its evolved height, retaining the image's grain and local variation.
         vec3 color=texture2D(source,clamp(st+gradient*.004*relief,0.,1.)).rgb;
+        // Compress the material's contrast around a lifted midtone and add a
+        // small warm bias. Keep input-driven wave relief independent of it.
+        color=(color-vec3(.36))*.68+vec3(.36)+vec3(.020,.009,-.008);
         float measuredScale=.0178571429;
-        color+=vec3((h.x*(1.+4.*relief)-h.y)*measuredScale);
+        color+=vec3((h.x*(1.+4.*relief)-h.y*.68)*measuredScale);
         color+=vec3(dot(gradient,vec2(.035,-.018))*relief);
         color+=(daylight-.5)*vec3(.07,.058,.038);
         gl_FragColor=vec4(mix(clamp(color,0.,1.),base,originalView),1.);
@@ -89,7 +92,7 @@
     function texture(unit){gl.activeTexture(gl.TEXTURE0+unit);const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);return t;}
     const originalTexture=texture(0),waveTexture=texture(1);
     gl.uniform1i(u.source,0);gl.uniform1i(u.waves,1);
-    const field=new RippleField(),packed=new Uint8Array(field.width*field.height*4);
+    const field=new RippleScene(),packed=new Uint8Array(field.width*field.height*4);
     const peopleSources=new PeopleRippleSources();
     gl.uniform2f(u.texel,1/field.width,1/field.height);
     const target={speed:.45,damping:.28,motion:.65,activity:.2,light:.5};

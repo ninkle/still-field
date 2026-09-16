@@ -42,12 +42,13 @@ class PersonTracker {
 }
 
 const FOOTSTEP_CADENCE=.32;
+const FOOTSTEP_STRENGTH=1.5;
 function emitFootstep(emit,x,y,dx,dy,side,confidence=1){
   // Place alternating impacts across the direction of travel in screen space.
-  // Use the same strength and cadence as the original Walk past interaction.
+  // Walk past and camera tracking share these stronger, distinct steps.
   const aspect=16/9,length=Math.hypot(dx*aspect,dy),offset=.012*side;
   const nx=length>0?-dy/length:0,ny=length>0?dx*aspect/length:1;
-  emit(Math.max(.015,Math.min(.985,x+nx*offset/aspect)),Math.max(.015,Math.min(.985,y+ny*offset)),.70*confidence);
+  emit(Math.max(.015,Math.min(.985,x+nx*offset/aspect)),Math.max(.015,Math.min(.985,y+ny*offset)),FOOTSTEP_STRENGTH*confidence);
 }
 
 class PeopleRippleSources {
@@ -78,10 +79,10 @@ class PeopleRippleSources {
         p.stepSide*=-1;
         p.lastX=p.x;p.lastY=p.y;p.lastTrail=now;p.nextPulse=now+1.7;
       }else if(now>=p.nextPulse){
-        emit(p.x,p.y,.60*p.confidence);p.lastX=p.x;p.lastY=p.y;p.nextPulse=now+2.3;
+        emit(p.x,p.y,.90*p.confidence);p.lastX=p.x;p.lastY=p.y;p.nextPulse=now+2.3;
       }
     }
   }
   positions(){return[...this.people.values()].filter(p=>p.confidence>=.25).map(p=>({id:p.id,x:p.x,y:p.y}));}
 }
-if(typeof module!=='undefined'&&module.exports)module.exports={PersonTracker,PeopleRippleSources,emitFootstep,FOOTSTEP_CADENCE};
+if(typeof module!=='undefined'&&module.exports)module.exports={PersonTracker,PeopleRippleSources,emitFootstep,FOOTSTEP_CADENCE,FOOTSTEP_STRENGTH};

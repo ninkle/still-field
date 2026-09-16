@@ -7,7 +7,7 @@ class RippleField {
     this.rest=new Float32Array(width*height);
     this.edge=new Float32Array(width*height);
     this.sourceWeights=[];
-    this.center=[.513333,.431953];this.time=0;
+    this.center=[.513333,.431953];this.time=0;this.drivePeriod=3.4;
     for(let y=1;y<height-1;y++)for(let x=1;x<width-1;x++){
       const edge=Math.max(0,1-Math.min(x,y,width-1-x,height-1-y)/16);
       this.edge[y*width+x]=edge*edge*6;
@@ -58,17 +58,49 @@ class RippleField {
       n[i]=(2*a[i]-(1-loss)*b[i]+cx2*(a[i-1]+a[i+1]-2*a[i])+cy2*(a[i-w]+a[i+w]-2*a[i]))/(1+loss);
     }
     this.time+=1/60;
-    const force=driveEnabled?Math.sin(this.time*2*Math.PI/3.4)*(.0018+.004*drive):0;
+    const force=driveEnabled?Math.sin(this.time*2*Math.PI/this.drivePeriod)*(.0018+.004*drive):0;
     for(const [i,weight] of this.sourceWeights)n[i]+=force*weight;
     this.previous=a;this.current=n;this.next=b;
   }
   encode(bytes){
-    for(let i=0;i<this.current.length;i++){
-      // RG = evolving height, BA = measured original height, both 16-bit.
-      const live=Math.round((Math.max(-4,Math.min(4,this.current[i]))/8+.5)*65535);
-      const rest=Math.round((this.rest[i]/8+.5)*65535);
-      bytes[i*4]=live>>8;bytes[i*4+1]=live&255;bytes[i*4+2]=rest>>8;bytes[i*4+3]=rest&255;
-    }
+    encodeWaveHeights(bytes,this.current,this.rest);
   }
 }
-if(typeof module!=='undefined' && module.exports)module.exports=RippleField;
+
+function encodeWaveHeights(bytes,current,rest,ambient=null,ambientStrength=0){
+  for(let i=0;i<current.length;i++){
+    // RG = combined evolving height, BA = measured original height, both 16-bit.
+    const height=current[i]+(ambient?ambient[i]*ambientStrength:0);
+    const live=Math.round((Math.max(-4,Math.min(4,height))/8+.5)*65535);
+    const original=Math.round((rest[i]/8+.5)*65535);
+    bytes[i*4]=live>>8;bytes[i*4+1]=live&255;bytes[i*4+2]=original>>8;bytes[i*4+3]=original&255;
+  }
+}
+
+class RippleScene {
+  constructor(width=384,height=216,stretch=2.7){
+    this.width=width;this.height=height;
+    this.ambient=new RippleField(width,height,stretch);
+    this.impacts=new RippleField(width,height,stretch);
+    this.ambient.drivePeriod=4.5;
+    this.ambientRemainder=0;
+  }
+  seed(data,speed=.58){
+    this.ambient.seed(data,.22);
+    this.impacts.seed(new Float32Array(data.length),speed);
+    this.ambientRemainder=0;
+  }
+  disturb(x,y,strength,radius){this.impacts.disturb(x,y,strength,radius);}
+  step(speed,damping,activity=.2){
+    // People keep a responsive propagation speed. The central field advances
+    // at 22% time, with a roughly 20-second breath and restrained relief.
+    this.impacts.step(speed,damping,0,false);
+    this.ambientRemainder+=.22;
+    while(this.ambientRemainder>=1){
+      this.ambient.step(.22,.18,Math.min(.35,Math.max(0,activity)));
+      this.ambientRemainder-=1;
+    }
+  }
+  encode(bytes){encodeWaveHeights(bytes,this.impacts.current,this.ambient.rest,this.ambient.current,.20);}
+}
+if(typeof module!=='undefined' && module.exports){module.exports=RippleField;module.exports.RippleScene=RippleScene;}

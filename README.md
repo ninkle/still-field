@@ -1,6 +1,8 @@
 # Still Field
 
-Interactive ripple artwork for a Mac mini and a 16:9 Samsung Frame display. The original image's elliptical rings evolve in a damped wave simulation. Camera positions add standing pulses and small alternating footsteps. Optional microphone loudness changes the field's energy.
+Interactive ripple artwork for a Mac mini and a 16:9 Samsung Frame display. A warm, softer rendering of the original image carries a slow central ripple, while camera positions add distinct standing pulses and stronger alternating footsteps. Optional microphone loudness changes the field's energy.
+
+The central ripple runs on its own slow clock, with roughly a 20-second cycle and restrained amplitude. Camera footsteps retain their responsive speed and are just over twice their original strength; standing pulses are 50% stronger. The material's contrast is reduced by 32%, with lifted shadows and a subtle warm tint. **View original** still shows the ungraded source. Existing camera, microphone and display settings are preserved when updating.
 
 The artwork, JavaScript detector and model weights are included in this repository. After cloning, the player builds and runs offline with Python's standard library. There is no npm install, pip install, cloud inference or runtime CDN download.
 
