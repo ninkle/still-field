@@ -1,0 +1,16 @@
+<details id="sf-installation-settings">
+  <summary>Installation settings</summary>
+  <div class="sf-settings-grid">
+    <label>Camera <select id="sf-camera-device"><option value="">System default camera</option></select></label>
+    <label>Microphone <select id="sf-mic-device"><option value="">System default microphone</option></select></label>
+    <label>Render detail <select id="sf-quality"><option value="1920">1080p · lighter</option><option value="2560" selected>1440p · balanced</option><option value="3840">4K · highest detail</option></select></label>
+    <label>Sound sensitivity <select id="sf-mic-gain"><option value="0.6">Low</option><option value="1" selected>Normal</option><option value="1.7">High</option></select></label>
+  </div>
+  <div class="sf-camera-options">
+    <label><input type="checkbox" id="sf-auto-camera"> Start camera when this player opens</label>
+    <button type="button" id="sf-refresh-devices">Refresh devices</button>
+    <button type="button" id="sf-display-mode">Show only the artwork</button>
+  </div>
+  <p class="sf-camera-help" id="sf-settings-status" role="status">Settings save on this computer. Device names appear after access is allowed. Changes to a device apply the next time you start it.</p>
+  <p class="sf-camera-help">Use the Logitech microphone or a USB microphone connected to the Mac. Sound is optional. Press S or Escape to return from the artwork view.</p>
+</details>

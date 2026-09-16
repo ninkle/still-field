@@ -1,0 +1,108 @@
+# Still Field
+
+Interactive ripple artwork for a Mac mini and a 16:9 Samsung Frame display. The original image's elliptical rings evolve in a damped wave simulation. Camera positions add standing pulses and small alternating footsteps. Optional microphone loudness changes the field's energy.
+
+The artwork, JavaScript detector and model weights are included in this repository. After cloning, the player builds and runs offline with Python's standard library. There is no npm install, pip install, cloud inference or runtime CDN download.
+
+## Install on the Mac mini
+
+You need **Google Chrome**, **Python 3.9 or newer**, and access to this private GitHub repository. A recent Apple-silicon Mac mini is the intended installation machine; the physical Mac/TV/camera combination still needs an in-room performance and alignment check.
+
+If Homebrew is already installed:
+
+```sh
+brew install python gh
+brew install --cask google-chrome
+gh auth login
+gh repo clone ninkle/still-field
+cd still-field
+./start.command
+```
+
+Skip installation commands for tools you already have. Alternatively, install [Python for macOS](https://www.python.org/downloads/macos/) and [Chrome](https://www.google.com/chrome/) directly, then clone with your usual Git client. The equivalent HTTPS clone URL is `https://github.com/ninkle/still-field.git`; private repository access requires GitHub authentication.
+
+You can also double-click `start.command` in Finder. It opens a dedicated Chrome profile and serves the player at **http://localhost:8765/**. Keep its Terminal window open while it runs; Control-C stops the server. The launcher uses macOS `caffeinate` to prevent idle Mac/display sleep while it is running. It does not change the TV's own sleep settings.
+
+## Connect and align
+
+1. Connect **Mac mini HDMI → Frame/One Connect HDMI**. Select that input on the TV. This application runs in TV/HDMI mode, not Samsung's still-photo Art Mode.
+2. Connect the **Logitech camera to the Mac by USB**. On Mac minis without USB-A, use a USB-A-to-USB-C adapter or suitable hub. Leave the computer ventilated.
+3. Click **Use camera**. Allow access in Chrome and, if prompted, macOS **System Settings → Privacy & Security → Camera**. Expand **Installation settings** to choose the Logitech device. Device labels may appear only after permission; click **Refresh devices** if needed. Stop and start the camera after changing the selection.
+4. In **Camera alignment**, keep **Mirror left / right** enabled for a mirror-like response. Choose **Feet / full body** when feet are visible, or **Body center / cropped view** for seated/cropped people. Fix the camera's position and disable any vendor automatic framing/zoom.
+5. Adjust wave speed, damping and ripple relief. Settings save in this Chrome profile. The defaults preserve the latest preview: speed 58%, damping 4%, relief 75%.
+6. Use **Full screen** or **F**, or select **Show only the artwork**. Press **S** or **Escape** to leave the artwork-only layout; Escape also exits browser fullscreen where supported. **Space** pauses/plays unless a form control has focus.
+
+For the 55-inch Frame, select a **3840 × 2160, 16:9** Mac display output if available. Begin with **1440p · balanced** internal render detail, which is scaled to the TV, then try **4K · highest detail** while the camera is running. The renderer targets roughly 30 frames/second. The original image is 2400 × 1350, so native 4K output does not create new photographic detail. Tune TV brightness and its own auto-off settings for the office.
+
+The current player uses **one camera**, accepting up to eight short-lived person tracks. A 1,000 sq ft room may have occluded areas; test the intended walking area before choosing a permanent mount. Detection runs at up to four updates/second, with smoothed positions. Footsteps are artistic impacts derived from movement, not measured individual foot contacts. Crossing/occluded people can change track IDs.
+
+## Optional sound
+
+Use a microphone **connected to the Mac**. The Frame's TV/remote microphone should not be treated as a Mac audio input over an ordinary HDMI connection. Samsung describes its microphone for [TV voice features](https://www.samsung.com/us/support/answer/ANS10005259/) and [ARC/eARC for TV audio to receivers/soundbars](https://www.samsung.com/us/support/answer/ANS10006962/); this project has no TV-microphone integration.
+
+Many Logitech webcams include a microphone; for example, the [C930e has two integrated microphones](https://www.logitech.com/en-us/products/webcams/c930e-business-webcam.html). Select the camera's microphone in **Installation settings**, then click **Use microphone** and allow Chrome/macOS microphone access. A separate USB microphone is also supported. Use **Sound sensitivity** to tune the response to the room.
+
+Sound measures only a local amplitude envelope. It does not locate footsteps or understand speech. Camera video and audio are never recorded, uploaded or transmitted by this application. The application stores only display preferences and selected device IDs locally in the browser.
+
+Microphone input requires a click each launch so Web Audio can start under normal browser autoplay rules. No microphone is enabled automatically. Camera input is off initially; **Start camera when this player opens** is an explicit, saved opt-in. Browser/macOS permission is still required. Unplugging a device stops its input; reconnect and press its start button again. A missing saved device will not silently switch to a different camera or microphone.
+
+## Daily display and login startup
+
+After completing device permissions and alignment, close the setup player window and run:
+
+```sh
+./start.command --kiosk
+```
+
+This uses the same dedicated Chrome profile and opens only the artwork. **S** reveals settings inside the kiosk window; **Command-Q** quits Chrome. If a Still Field Chrome window is already open, quit it before switching between setup and kiosk modes. Enable the saved camera-start setting if camera tracking should resume after login.
+
+For optional automatic startup **after macOS login**, stop the manually started server first, then install the login item on the Mac mini:
+
+```sh
+python3 scripts/login_item.py install
+```
+
+It starts at the next login and restarts the server if that process fails. It does not independently monitor a closed Chrome window, bypass FileVault, configure automatic Mac login, control the TV's power, or turn on the microphone. To remove it:
+
+```sh
+python3 scripts/login_item.py remove
+```
+
+Logs are in `~/Library/Logs/Still Field/`. The dedicated browser profile is in `~/Library/Application Support/Still Field/Chrome/`. Neither is part of the repository. A different port or browser profile has separate permissions/settings.
+
+## Update
+
+Stop the manual server with Control-C, or remove the login item while updating. Quit the Still Field Chrome window, then:
+
+```sh
+git pull --ff-only
+./start.command
+```
+
+The launcher rebuilds from the checked-in files each time and verifies detector checksums. Reinstall the login item afterward if you use it. No machine-specific source paths are required. A port conflict produces an explanatory error instead of terminating another program; `./start.command --port 8766` is an optional temporary alternative.
+
+## Development
+
+Canonical source is in `src/`, the original artwork and extracted ring seed are in `assets/`, and pinned detector assets/licenses are in `vendor/camera/`. `dist/index.html` is generated and intentionally ignored by Git. The generated page embeds everything and is about 31 MB. No Git LFS is needed.
+
+```sh
+python3 scripts/build.py
+python3 scripts/run.py --no-open
+python3 scripts/check.py
+```
+
+Checks additionally require **Node 18+** but no npm packages. They cover wave propagation/interference/stability, tracking and footstep cadence, saved settings, selected devices, cancellation and input cleanup, server origin/host validation, and packaged JavaScript syntax. Live camera accuracy, sustained FPS, HDMI behavior and login startup must be verified on the installation Mac.
+
+For a synthetic test, use **Try tracking demo**. It shows one standing and one moving simulated person; no camera stream is obtained. **Walk past** previews a short footstep trail, and **View original** compares with the starting image.
+
+The optional loopback sensor bridge can be enabled by opening `/?sensors=1`. Send normalized values with a local adapter:
+
+```sh
+curl -X POST http://localhost:8765/api/input \
+  -H 'Content-Type: application/json' \
+  -d '{"presence":0.8,"x":0.3,"y":0.5,"activity":0.25}'
+```
+
+The server binds only to `127.0.0.1` and serves the player, health check and bounded sensor API. It does not expose repository files or accept remote sensor connections.
+
+Third-party TensorFlow.js / COCO-SSD notices are in [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt). The original artwork is included for this private installation; those notices do not grant rights to the artwork.

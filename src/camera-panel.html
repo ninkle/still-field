@@ -1,0 +1,18 @@
+<section id="sf-camera-panel" hidden aria-label="Camera alignment">
+  <div class="sf-camera-top">
+    <strong>Camera alignment</strong>
+    <span id="sf-camera-status" role="status" aria-live="polite">Camera off</span>
+  </div>
+  <div class="sf-camera-options">
+    <label><input type="checkbox" id="sf-camera-mirror" checked> Mirror left / right</label>
+    <label>Ripple position
+      <select id="sf-camera-anchor"><option value="feet">Feet / full body</option><option value="center">Body center / cropped view</option></select>
+    </label>
+    <label><input type="checkbox" id="sf-camera-preview" checked> Show camera preview</label>
+  </div>
+  <div class="sf-camera-view">
+    <video id="sf-camera-video" autoplay muted playsinline hidden></video>
+    <canvas id="sf-camera-overlay" width="640" height="360" role="img" aria-label="Mirrored camera preview with detected people and ripple source positions"></canvas>
+  </div>
+  <p class="sf-camera-help">Frame the full person for feet placement. The marked points map to the same positions on the artwork. Frames stay on this device and are not recorded.</p>
+</section>

@@ -1,0 +1,10 @@
+.DS_Store
+__pycache__/
+*.pyc
+/dist/
+/outputs/
+/work/
+/.runtime/
+/.env
+/.env.*
+*.log
