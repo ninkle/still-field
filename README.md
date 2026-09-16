@@ -6,7 +6,7 @@ The central ripple runs on its own slow clock, with roughly a 20-second cycle an
 
 Footsteps begin as distinct impressions, expand into rings, and soften into broader swells as fine detail dissipates. Slow movement produces wider, gentler steps; brisk movement produces tighter, stronger steps, with capped strength and reduced intensity in a crowd. This follows smoothed movement in the camera image, not measured physical walking speed.
 
-After a person stops for a few seconds, their steps settle into a broad ripple with a nine-second breathing cycle. It fades smoothly when they leave. With camera tracking active and nobody detected, the central ripple approaches stillness over roughly 30–45 seconds, then gently wakes when someone returns. Without an active camera or tracking demo, the autonomous artwork continues its usual quiet motion. Damping still adjusts how long input ripples remain; fine detail softens even at low damping.
+After a person stops for about three seconds, gentle rings start spreading outward from their detected position about every four seconds. These rings travel through the same wave field as footsteps and meet other people's ripples, with slightly different rhythms per person. A broad nine-second breathing ripple remains underneath. New standing rings stop when the person moves, jumps or disappears; existing rings fade naturally. With camera tracking active and nobody detected, the central ripple approaches stillness over roughly 30–45 seconds, then gently wakes when someone returns. Without an active camera or tracking demo, the autonomous artwork continues its usual quiet motion. Damping still adjusts how long input ripples remain; fine detail softens even at low damping.
 
 The artwork, JavaScript detector and model weights are included in this repository. After cloning, the player builds and runs offline with Python's standard library. There is no npm install, pip install, cloud inference or runtime CDN download.
 
@@ -58,7 +58,13 @@ Many Logitech webcams include a microphone; for example, the [C930e has two inte
 
 Sound measures only a local amplitude envelope. It does not locate footsteps or understand speech. Camera video and audio are never recorded, uploaded or transmitted by this application. The application stores only display preferences and selected device IDs locally in the browser.
 
-Microphone input requires a click each launch so Web Audio can start under normal browser autoplay rules. No microphone is enabled automatically. Camera input is off initially; **Start camera when this player opens** is an explicit, saved opt-in. Browser/macOS permission is still required. Unplugging a device stops its input; reconnect and press its start button again. A missing saved device will not silently switch to a different camera or microphone.
+Microphone input requires a click each launch so Web Audio can start under normal browser autoplay rules. No microphone is enabled automatically. Camera input is off initially; **Start camera when this player opens** is an explicit, saved opt-in. Browser/macOS permission is still required. Unplugging a microphone stops its input; reconnect and press its start button again. A missing saved device will not silently switch to a different camera or microphone.
+
+### If the camera freezes
+
+The player checks that decoded video frames keep arriving, independently of whether people move. It does not keep analyzing the same frame. After two seconds without fresh frames it clears the old person positions and preview; after five seconds it releases and reconnects the same camera. A disconnected track also triggers recovery. Recovery attempts are capped at three until playback has been healthy for 30 seconds, and **Stop camera** / **Cancel camera** cancels recovery. The initial camera permission prompt remains under your control.
+
+Switching away from the player pauses tracking and returning waits for a fresh frame. If the person detector itself stops responding for ten seconds, the player releases the camera and asks you to reload, rather than starting overlapping detector jobs. If reconnection fails, check the USB cable/hub and click **Use camera**. The freeze recovery is tested with simulated stalls and disconnections; the installation camera still needs an in-room check. Browser freshness uses the [decoded-frame counter](https://developer.mozilla.org/en-US/docs/Web/API/VideoPlaybackQuality/totalVideoFrames) (media time on older browsers), not a comparison of image contents.
 
 ## Daily display and login startup
 

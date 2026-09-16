@@ -58,6 +58,6 @@ for(let i=0;i<540;i++){
  sources.tick(1/60,now,(x,y,strength,touch)=>steps.push(touch));
 }
 assert.equal(jumpEvents.filter(e=>e.kind==='landing').length,3,'The real tracker preserves repeated jump detections');
-assert.equal(steps.length,0,'Takeoff and landing do not also emit walking footsteps');
+assert.equal(steps.filter(s=>s.kind==='footstep').length,0,'Takeoff and landing do not also emit walking footsteps');
 jumps.clear();assert.equal(jumps.states.size,0);
 console.log('Jump timing, repeated landings, bent-knee returns, false-positive guards and footstep suppression passed.');

@@ -64,7 +64,7 @@ class PeopleRippleSources {
       if(!Number.isFinite(person.x)||!Number.isFinite(person.y)||person.id==null)continue;
       const id=String(person.id),x=Math.max(.015,Math.min(.985,person.x)),y=Math.max(.015,Math.min(.985,person.y));seen.add(id);
       let p=this.people.get(id);
-      if(!p){p={id,x,y,targetX:x,targetY:y,lastX:x,lastY:y,motionX:x,motionY:y,lastMotion:now,lastTrail:-1,stepSide:1,seen:now,confidence:1,speed:0,settled:0};this.people.set(id,p);}
+      if(!p){p={id,x,y,targetX:x,targetY:y,lastX:x,lastY:y,motionX:x,motionY:y,lastMotion:now,lastTrail:-1,nextRipple:now+2,stepSide:1,seen:now,confidence:1,speed:0,settled:0};this.people.set(id,p);}
       p.targetX=x;p.targetY=y;p.seen=now;p.confidence=Number.isFinite(person.confidence)?Math.max(0,Math.min(1,person.confidence)):1;
       p.jumping=person.jumping===true;
     }
@@ -77,8 +77,8 @@ class PeopleRippleSources {
       if(now-p.seen>1.8){this.people.delete(id);continue;}
       const alpha=1-Math.exp(-dt/.15),oldX=p.x,oldY=p.y;
       p.x+=(p.targetX-p.x)*alpha;p.y+=(p.targetY-p.y)*alpha;
-      if(!enabled||p.confidence<.25){p.lastX=p.x;p.lastY=p.y;p.motionX=p.x;p.motionY=p.y;p.lastMotion=now;p.speed=0;continue;}
-      if(p.jumping){p.lastX=p.x;p.lastY=p.y;p.motionX=p.x;p.motionY=p.y;p.lastMotion=now;p.speed=0;p.settled*=Math.exp(-dt/.2);continue;}
+      if(!enabled||p.confidence<.25){p.lastX=p.x;p.lastY=p.y;p.motionX=p.x;p.motionY=p.y;p.lastMotion=now;p.speed=0;p.settled=0;p.nextRipple=now+2;continue;}
+      if(p.jumping){p.lastX=p.x;p.lastY=p.y;p.motionX=p.x;p.motionY=p.y;p.lastMotion=now;p.speed=0;p.settled*=Math.exp(-dt/.2);p.nextRipple=now+2;continue;}
       const speed=Math.min(.8,Math.hypot((p.x-oldX)*16/9,p.y-oldY)/Math.max(.001,dt));
       p.speed+=(speed-p.speed)*(1-Math.exp(-dt/.4));
       // A position deadband allows a stationary person's box to wobble without
@@ -86,6 +86,14 @@ class PeopleRippleSources {
       if(Math.hypot((p.x-p.motionX)*16/9,p.y-p.motionY)>.02){p.lastMotion=now;p.motionX=p.x;p.motionY=p.y;}
       const settle=Math.max(0,Math.min(1,(now-p.lastMotion-.9)/1.8));
       p.settled+=(settle-p.settled)*(1-Math.exp(-dt/(settle>p.settled?.8:.25)));
+      // A still person repeatedly sends a gentle ring into the same physical
+      // field as footsteps, so it travels outward and meets other people's rings.
+      if(settle<.35||p.settled<.35)p.nextRipple=now+.5;
+      else if(now>=p.nextRipple){
+        emit(p.x,p.y,.95*(.6+.4*p.settled)*p.confidence*crowd,{kind:'standing',radius:11.5});
+        const phase=[...id].reduce((sum,c)=>sum+c.charCodeAt(0),0)%7;
+        p.nextRipple=now+3.8+phase*.1;
+      }
       const distance=Math.hypot((p.x-p.lastX)*16/9,p.y-p.lastY);
       if(distance>.045&&now-p.lastTrail>=movementTouch(p.speed).cadence){
         // One distinct step per beat, even after a delayed camera update.
@@ -103,7 +111,7 @@ function trackingDemo(time){
   let x1,x2,label;
   if(t<10){x1=.08+t*.018;x2=.70-t*.04;label='Slow and brisk walking';}
   else if(t<14){x1=.26+(t-10)*.10;x2=.30;label='Picking up the pace';}
-  else if(t<25){x1=.66;x2=.30;label='Settling into breathing ripples';}
+  else if(t<25){x1=.66;x2=.30;label='Standing still · gentle outward rings';}
   else if(t<31){x1=.66+(t-25)*.045;x2=.30-(t-25)*.045;label='Leaving the room';}
   else return {predictions:[],label:'Empty room · gradually becoming still'};
   return {label,predictions:[{class:'person',score:.98,bbox:[x1*640,.20*360,.10*640,.62*360]},{class:'person',score:.97,bbox:[x2*640,.34*360,.10*640,.42*360]}]};

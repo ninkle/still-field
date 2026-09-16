@@ -15,7 +15,8 @@ for(let i=0;i<360;i++){
  const now=i/60;if(i%15===0)s.update([{id:1,x:.3,y:.6},{id:2,x:.7,y:.4}],now);
  s.tick(1/60,now,emit);
 }
-assert.equal(emitted.length,0,'Standing people breathe continuously instead of firing repeated impacts');
+assert.equal(emitted.filter(e=>e[3].kind==='footstep').length,0,'Standing people do not fire footsteps');
+assert.equal(emitted.filter(e=>e[3].kind==='standing').length,2,'Each still person sends an outward ring after settling');
 assert(s.positions().every(p=>p.settled>.95),'Stationary people settle gently into breathing ripples');
 const stationary=emitted.length;
 for(let i=360;i<480;i++){
@@ -71,3 +72,25 @@ for(let i=720;i<810;i++){
 assert(transition.positions()[0].settled<.05,'Walking again releases the standing ripple');
 assert(trackingDemo(3).predictions.length===2&&trackingDemo(20).predictions.length===2&&trackingDemo(45).predictions.length===0,'Demo covers movement, settling and an empty room');
 console.log('Tracking, movement-dependent footsteps, settling, jitter suppression, pause and cleanup passed.');
+
+for(const fps of [15,30,60]){
+ const standing=new PeopleRippleSources(),rings=[];
+ for(let i=0;i<fps*18;i++){
+  const now=i/fps;
+  if(i%Math.max(1,Math.round(fps/4))===0)standing.update([{id:'still',x:.3,y:.6}],now);
+  standing.tick(1/fps,now,(x,y,strength,touch)=>rings.push({x,y,strength,touch,now}));
+ }
+ assert(rings.length>=4&&rings.length<=5,`A standing person emits recurring rings at ${fps} fps`);
+ for(const r of rings){assert.equal(r.touch.kind,'standing');assert.equal(r.x,.3);assert.equal(r.y,.6);assert(r.strength>.65&&r.strength<=.95);}
+ for(let i=1;i<rings.length;i++)assert(rings[i].now-rings[i-1].now>=3.8,'Standing rings remain spacious');
+ const count=rings.length;
+ standing.update([],18);standing.tick(1/fps,18,()=>rings.push('unexpected'));
+ assert.equal(rings.length,count,'Losing detection immediately stops new standing rings');
+}
+const paused=new PeopleRippleSources(),pausedRings=[];
+for(let i=0;i<900;i++){
+ const now=i/60;paused.update([{id:1,x:.5,y:.5,jumping:now>=6&&now<10}],now);
+ paused.tick(1/60,now,(x,y,s,t)=>pausedRings.push({now,kind:t.kind}),now<3||now>=6);
+}
+assert(pausedRings.every(r=>r.now<3||r.now>=12),'No standing rings while paused, jumping, or immediately afterward');
+console.log('Standing rings recur at the detected position and stop during absence, pause and jumps.');

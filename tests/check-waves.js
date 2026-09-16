@@ -94,3 +94,22 @@ for(let i=0;i<3600;i++){
 assert(landings.impacts.current.every(Number.isFinite));
 assert(Math.max(...landings.impacts.current.map(Math.abs))<4,'Repeated broad landings stay stable at maximum speed and minimum damping');
 console.log('Repeated landing-ripple stability passed.');
+
+const {PeopleRippleSources}=require('../src/person-tracking.js');
+for(const speed of [0,1]){
+ const standing=new Field.RippleScene(96,54),sources=new PeopleRippleSources();let count=0;
+ const people=Array.from({length:8},(_,i)=>({id:i,x:.15+(i%4)*.23,y:i<4?.35:.65,confidence:1}));
+ for(let i=0;i<3600;i++){
+  const now=i/60;if(i%15===0)sources.update(people,now);
+  sources.tick(1/60,now,(x,y,s,t)=>{assert.equal(t.kind,'standing');standing.disturb(x,y,s,t.radius);count++;});
+  standing.setPeople(sources.positions(),true);standing.step(speed,0);
+ }
+ assert(count>100,'Eight stationary people keep producing rings over a minute');
+ assert(standing.impacts.current.every(Number.isFinite));
+ assert(Math.max(...standing.impacts.current.map(Math.abs))<4,'Standing ripples stay bounded in a crowd');
+ assert(energy(standing.impacts)>.01,'Standing sources actually drive the propagating wave field');
+ const before=energy(standing.impacts);standing.setPeople([],true);
+ for(let i=0;i<1800;i++)standing.step(speed,0);
+ assert(energy(standing.impacts)<before*.1,'The room settles again after people leave');
+}
+console.log('Recurring standing rings propagate, stay stable in a crowd, and fade after departure.');
