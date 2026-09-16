@@ -58,13 +58,7 @@ Many Logitech webcams include a microphone; for example, the [C930e has two inte
 
 Sound measures only a local amplitude envelope. It does not locate footsteps or understand speech. Camera video and audio are never recorded, uploaded or transmitted by this application. The application stores only display preferences and selected device IDs locally in the browser.
 
-Microphone input requires a click each launch so Web Audio can start under normal browser autoplay rules. No microphone is enabled automatically. Camera input is off initially; **Start camera when this player opens** is an explicit, saved opt-in. Browser/macOS permission is still required. Unplugging a microphone stops its input; reconnect and press its start button again. A missing saved device will not silently switch to a different camera or microphone.
-
-### If the camera freezes
-
-The player checks that decoded video frames keep arriving, independently of whether people move. It does not keep analyzing the same frame. After two seconds without fresh frames it clears the old person positions and preview; after five seconds it releases and reconnects the same camera. A disconnected track also triggers recovery. Recovery attempts are capped at three until playback has been healthy for 30 seconds, and **Stop camera** / **Cancel camera** cancels recovery. The initial camera permission prompt remains under your control.
-
-Switching away from the player pauses tracking and returning waits for a fresh frame. If the person detector itself stops responding for ten seconds, the player releases the camera and asks you to reload, rather than starting overlapping detector jobs. If reconnection fails, check the USB cable/hub and click **Use camera**. The freeze recovery is tested with simulated stalls and disconnections; the installation camera still needs an in-room check. Browser freshness uses the [decoded-frame counter](https://developer.mozilla.org/en-US/docs/Web/API/VideoPlaybackQuality/totalVideoFrames) (media time on older browsers), not a comparison of image contents.
+Microphone input requires a click each launch so Web Audio can start under normal browser autoplay rules. No microphone is enabled automatically. Camera input is off initially; **Start camera when this player opens** is an explicit, saved opt-in. Browser/macOS permission is still required. Unplugging a device stops its input; reconnect and press its start button again. A missing saved device will not silently switch to a different camera or microphone.
 
 ## Daily display and login startup
 

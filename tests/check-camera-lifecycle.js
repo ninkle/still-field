@@ -16,7 +16,7 @@ const mediaTrack={stop(){stops++;},addEventListener(){}};
 const stream={getTracks:()=>[mediaTrack],getVideoTracks:()=>[mediaTrack]};
 const art={setPeople(){},clearPeople(){clearCalls++;},jumpImpact(){}};
 const context={console,performance,TextDecoder,Uint8Array,atob,PersonTracker,
-  document:{getElementById:element,createElement:()=>new Element(),head:{appendChild(){}},fullscreenElement:null,hidden:false,addEventListener(){}},
+  document:{getElementById:element,createElement:()=>new Element(),head:{appendChild(){}},fullscreenElement:null,hidden:false},
   navigator:{mediaDevices:{getUserMedia(constraints){lastConstraints=constraints;cameraCalls++;return new Promise(r=>resolveCamera=r);}}},
   setTimeout:()=>1,clearTimeout(){},requestAnimationFrame:()=>1,cancelAnimationFrame(){},
   tf:{setBackend:async()=>{},ready:async()=>{},io:{fromMemory:a=>a}},

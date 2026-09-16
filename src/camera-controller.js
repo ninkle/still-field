@@ -11,8 +11,6 @@
   const showPreview=document.getElementById('sf-camera-preview'),jumpToggle=document.getElementById('sf-camera-jumps'),tracker=new PersonTracker(),jumps=new JumpDetector();
   const sample=document.createElement('canvas');sample.width=320;sample.height=180;const sampleCtx=sample.getContext('2d');
   let stream=null,detector=null,loading=null,run=0,timer=0,active=false,displayedCount=-1,previewRaf=0,loadTimer=0;
-  let healthTimer=0,retryTimer=0,recoveries=0,cameraDevice='',inference=null;
-  let frameToken=null,frameSerial=0,consumedFrame=0,lastFrameAt=0,healthySince=0,stale=true,observationEpoch=0;
   let demo=false,demoKind='tracking',demoStart=0,detectMillis=0;
   const jumpsEnabled=()=>jumpToggle.checked&&anchor.value==='feet';
   const bundled=document.getElementById('sf-camera-assets');
@@ -35,53 +33,10 @@
   }
   function resetTracks(){tracker.clear();jumps.clear();art.clearPeople();displayedCount=-1;}
   function stop(message='Camera off'){
-    run++;active=false;demo=false;clearTimeout(timer);clearTimeout(loadTimer);clearTimeout(healthTimer);clearTimeout(retryTimer);cancelAnimationFrame(previewRaf);
+    run++;active=false;demo=false;clearTimeout(timer);clearTimeout(loadTimer);cancelAnimationFrame(previewRaf);
     if(stream)stream.getTracks().forEach(track=>track.stop());stream=null;
     video.pause();video.srcObject=null;sampleCtx.clearRect(0,0,sample.width,sample.height);ctx.clearRect(0,0,preview.width,preview.height);
     resetTracks();button.textContent='Use camera';demoButton.textContent='Try tracking demo';jumpDemoButton.textContent='Try jump demo';button.disabled=false;status.textContent=message;
-  }
-  function frameCounter(){
-    // Count decoded frames, not changes in pixels: a still person is valid input.
-    // currentTime is a fallback for browsers without decoded-frame counters.
-    const count=video.getVideoPlaybackQuality?.().totalVideoFrames;
-    return Number.isFinite(count)?count:Number.isFinite(video.webkitDecodedFrameCount)?video.webkitDecodedFrameCount:video.currentTime;
-  }
-  function pollFrame(){
-    const track=stream?.getVideoTracks()[0],token=frameCounter();
-    if(!track||track.muted||track.readyState==='ended'||video.readyState<2||!video.videoWidth||!video.videoHeight)return;
-    if(Number.isFinite(token)&&token!==frameToken){
-      frameToken=token;frameSerial++;lastFrameAt=performance.now();
-      if(stale){stale=false;displayedCount=-1;status.textContent='Camera on · looking for people';}
-      if(!healthySince)healthySince=lastFrameAt;
-    }
-  }
-  function discardStale(message){
-    observationEpoch++;
-    if(!stale){stale=true;resetTracks();ctx.clearRect(0,0,preview.width,preview.height);}
-    healthySince=0;status.textContent=message;
-  }
-  function recover(message){
-    if(!active||demo)return;
-    const attempt=recoveries+1;
-    stop();recoveries=attempt;
-    if(attempt>3){status.textContent='Camera could not recover. Check the USB connection, then click Use camera.';return;}
-    active=true;button.textContent='Cancel camera';status.textContent=`${message} · reconnecting (${attempt}/3)…`;
-    const generation=run;
-    retryTimer=setTimeout(()=>{if(active&&generation===run)openCamera(generation);},attempt*1000);
-  }
-  function watchCamera(generation){
-    if(!active||demo||generation!==run)return;
-    const now=performance.now();
-    if(!document.hidden){
-      pollFrame();
-      // A pending inference cannot safely be cancelled/restarted on the same
-      // model. Stop cleanly rather than piling up GPU jobs or retaining tracks.
-      if(inference&&now-inference.started>10000){stop('Tracking stopped responding. Reload the player to restart the detector.');return;}
-      if(now-lastFrameAt>2000)discardStale('Camera paused · waiting for fresh frames…');
-      if(now-lastFrameAt>5000){recover('Camera stalled');return;}
-      if(healthySince&&now-healthySince>30000)recoveries=0;
-    }
-    healthTimer=setTimeout(()=>watchCamera(generation),500);
   }
   function report(people){
     const events=jumps.update(people,performance.now()/1000,jumpsEnabled());
@@ -103,8 +58,8 @@
     if(!showPreview.checked||panel.hidden||document.fullscreenElement||document.body?.classList.contains('sf-display'))return;
     const w=preview.width,h=preview.height,tracks=tracker.visible(performance.now()/1000);
     ctx.clearRect(0,0,w,h);
-    if(!demo&&!stale&&video.readyState>=2){ctx.save();if(mirror.checked){ctx.translate(w,0);ctx.scale(-1,1);}ctx.drawImage(video,0,0,w,h);ctx.restore();}
-    else{ctx.fillStyle='#282d26';ctx.fillRect(0,0,w,h);ctx.fillStyle='#c7d0ba';ctx.font='14px system-ui';ctx.fillText(demo?'Simulated positions · no camera in use':'Waiting for fresh camera frames…',16,25);}
+    if(!demo&&video.readyState>=2){ctx.save();if(mirror.checked){ctx.translate(w,0);ctx.scale(-1,1);}ctx.drawImage(video,0,0,w,h);ctx.restore();}
+    else{ctx.fillStyle='#282d26';ctx.fillRect(0,0,w,h);ctx.fillStyle='#c7d0ba';ctx.font='14px system-ui';ctx.fillText('Simulated positions · no camera in use',16,25);}
     for(const t of tracks){
       const[x,y,bw,bh]=t.box,left=mirror.checked?1-x-bw:x;
       ctx.strokeStyle='#e2ead7';ctx.lineWidth=1.5;ctx.strokeRect(left*w,y*h,bw*w,bh*h);
@@ -117,25 +72,17 @@
     if(!active||generation!==run)return;
     const start=performance.now();
     try{
+      if(video.readyState<2){timer=setTimeout(()=>detect(generation),150);return;}
       if(document.hidden){timer=setTimeout(()=>detect(generation),350);return;}
-      pollFrame();
-      if(stale||frameSerial===consumedFrame||inference){timer=setTimeout(()=>detect(generation),80);return;}
-      consumedFrame=frameSerial;
       const aspect=video.videoWidth/video.videoHeight;
       const desiredHeight=Math.round(320/aspect);
       if(sample.height!==desiredHeight){sample.height=desiredHeight;preview.height=Math.round(640/aspect);}
       sampleCtx.drawImage(video,0,0,sample.width,sample.height);
-      const job={started:start,epoch:observationEpoch};inference=job;
-      let boxes;
-      try{boxes=await detector.detect(sample,20,.50);}finally{if(inference===job)inference=null;}
+      const boxes=await detector.detect(sample,20,.50);
       if(!active||generation!==run)return;
       detectMillis=performance.now()-start;
-      // A slow result or a frame captured before a hide/mute is no longer a
-      // reliable observation of where somebody is standing now.
-      if(!document.hidden&&!stale&&job.epoch===observationEpoch&&detectMillis<1500&&performance.now()-lastFrameAt<2000){
-        tracker.maxAge=Math.max(1.2,Math.min(3,detectMillis/1000*2+.6));
-        report(tracker.update(boxes,sample.width,sample.height,performance.now()/1000));
-      }else if(!document.hidden)discardStale('Tracking is catching up · waiting for a fresh result…');
+      tracker.maxAge=Math.max(1.2,Math.min(3,detectMillis/1000*2+.6));
+      report(tracker.update(boxes,sample.width,sample.height,performance.now()/1000));
     }catch(e){if(generation===run){stop('Camera tracking stopped. Try again or use Chrome with graphics acceleration enabled.');console.error('Person detection failed:',e);}return;}
     timer=setTimeout(()=>detect(generation),Math.max(30,(jumpsEnabled()?100:250)-(performance.now()-start)));
   }
@@ -143,40 +90,22 @@
     if(demo)stop();else if(active){stop();return;}
     if(loading){stop('Camera startup cancelled');return;}
     panel.hidden=false;button.textContent='Cancel camera';button.disabled=false;status.textContent='Starting local person detector…';
-    const generation=++run;active=true;recoveries=0;cameraDevice=settings?.get('cameraDevice')||'';
+    const generation=++run;active=true;
     try{
       if(!navigator.mediaDevices?.getUserMedia)throw Object.assign(new Error('Camera requires localhost'),{name:'InsecureContext'});
       await model();if(generation!==run)return;
-      await openCamera(generation);
-    }catch(e){if(generation===run)startupError(e);}
-  }
-  function startupError(e){
-    const message=e.name==='NotAllowedError'?'Camera access declined. Allow it in Chrome and macOS Privacy & Security to use tracking.':e.name==='NotFoundError'||e.name==='OverconstrainedError'?'Selected camera unavailable. Choose a connected camera in Installation settings.':e.name==='InsecureContext'?'Open the player through the local launcher to use the camera.':'Camera could not start. Check camera availability and try again.';
-    stop(message);console.error('Camera startup failed:',e);
-  }
-  async function openCamera(generation){
-    try{
-      if(!recoveries)status.textContent='Allow the camera to start tracking people';
-      // Do not time out the initial permission prompt. A recovery request is
-      // already authorized; release a late stream if it outlives its attempt.
-      if(recoveries)loadTimer=setTimeout(()=>{if(generation===run)recover('Camera did not reconnect');},15000);
-      const acquired=await navigator.mediaDevices.getUserMedia({video:{...(cameraDevice?{deviceId:{exact:cameraDevice}}:{}),width:{ideal:640},height:{ideal:360},frameRate:{ideal:24,max:30},facingMode:'user'},audio:false});
+      status.textContent='Allow the camera to start tracking people';
+      const deviceId=settings?.get('cameraDevice');
+      const acquired=await navigator.mediaDevices.getUserMedia({video:{...(deviceId?{deviceId:{exact:deviceId}}:{}),width:{ideal:640},height:{ideal:360},frameRate:{ideal:24,max:30},facingMode:'user'},audio:false});
       if(generation!==run){acquired.getTracks().forEach(track=>track.stop());return;}
-      clearTimeout(loadTimer);stream=acquired;
-      const track=stream.getVideoTracks()[0];
-      if(!track)throw new Error('Camera returned no video track');
-      cameraDevice=track.getSettings?.().deviceId||cameraDevice;
-      track.addEventListener('ended',()=>{if(generation===run)recover('Camera disconnected');},{once:true});
-      track.addEventListener('mute',()=>{if(generation===run)discardStale('Camera paused · waiting for fresh frames…');});
-      video.srcObject=stream;frameToken=frameCounter();frameSerial=0;consumedFrame=0;stale=true;healthySince=0;
-      loadTimer=setTimeout(()=>{if(generation===run)recover('Camera playback did not start');},10000);
-      await video.play();if(generation!==run)return;
-      clearTimeout(loadTimer);lastFrameAt=performance.now();
+      stream=acquired;video.srcObject=stream;await video.play();if(generation!==run)return;
+      stream.getVideoTracks()[0].addEventListener('ended',()=>{if(generation===run)stop('Camera disconnected');},{once:true});
       settings?.refreshDevices();
-      button.textContent='Stop camera';status.textContent='Camera on · waiting for fresh frames';resetTracks();draw();watchCamera(generation);detect(generation);
+      button.textContent='Stop camera';status.textContent='Camera on · looking for people';resetTracks();draw();detect(generation);
     }catch(e){
       if(generation!==run)return;
-      if(recoveries&&e.name!=='NotAllowedError')recover('Camera unavailable');else startupError(e);
+      const message=e.name==='NotAllowedError'?'Camera access declined. Allow it in Chrome and macOS Privacy & Security to use tracking.':e.name==='NotFoundError'||e.name==='OverconstrainedError'?'Selected camera unavailable. Choose a connected camera in Installation settings.':e.name==='InsecureContext'?'Open the player through the local launcher to use the camera.':'Camera could not start. Check camera availability and try again.';
+      stop(message);console.error('Camera startup failed:',e);
     }
   }
   button.addEventListener('click',start);
@@ -186,13 +115,6 @@
   jumpToggle.disabled=anchor.value!=='feet';
   showPreview.addEventListener('change',()=>{preview.hidden=!showPreview.checked;if(!showPreview.checked)ctx.clearRect(0,0,preview.width,preview.height);});
   window.addEventListener('pagehide',()=>{stop();},{once:true});
-  document.addEventListener('visibilitychange',()=>{
-    if(!active||demo)return;
-    discardStale(document.hidden?'Camera tracking paused while the player is hidden':'Camera resuming · waiting for fresh frames…');
-    // Ignore time spent in a background tab or asleep. Require a new frame on
-    // return, allowing five seconds for normal camera playback to resume.
-    lastFrameAt=performance.now();frameToken=frameCounter();consumedFrame=frameSerial;
-  });
   // Explicit synthetic demo: exercises person positions and ripple trails
   // without obtaining a camera stream or pretending to have detected people.
   function startDemo(kind){
@@ -211,7 +133,7 @@
   demoButton.addEventListener('click',()=>startDemo('tracking'));
   jumpDemoButton.addEventListener('click',()=>startDemo('jump'));
   // Read-only state and an explicit fixture path support camera-free QA.
-  window.StillFieldCamera={getState:()=>({active,demo,people:tracker.visible(performance.now()/1000).length,detectMillis,recoveries,stale:!demo&&stale}),async checkDetector(image){return(await model()).detect(image,20,.5);}};
+  window.StillFieldCamera={getState:()=>({active,demo,people:tracker.visible(performance.now()/1000).length,detectMillis}),async checkDetector(image){return(await model()).detect(image,20,.5);}};
   // The first launch stays camera-free. Automatic capture is an explicit saved choice.
   if(settings?.get('autoCamera'))start();
 })();
