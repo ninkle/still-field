@@ -81,6 +81,21 @@ git pull --ff-only
 
 The launcher rebuilds from the checked-in files each time and verifies detector checksums. Reinstall the login item afterward if you use it. No machine-specific source paths are required. A port conflict produces an explanatory error instead of terminating another program; `./start.command --port 8766` is an optional temporary alternative.
 
+## If startup stops with “Killed: 9”
+
+This means a process received SIGKILL; it does not establish whether the cause was a security check, memory pressure, or another process. The launcher prints the selected Python path and startup stages, and keeps an interactive Terminal open on a reported failure. If the launcher itself is killed, it cannot print a diagnosis.
+
+From the repository folder in Terminal, test Python and the server directly:
+
+```sh
+python3 --version
+python3 -u scripts/run.py --no-open
+```
+
+If it prints `Art player: http://localhost:8765/`, keep Terminal open and open that URL in Chrome. This isolates the server from the launcher and automatic Chrome opening; it does not keep the Mac awake. If the launcher's printed Python path differs from `command -v python3`, also run that exact Python executable with `--version`. Save the last printed stage and the complete error when reporting a failure. A failed Python version check happens before the artwork or detector runs.
+
+If macOS instead displays an explicit security alert, use [Apple's guidance for opening apps safely](https://support.apple.com/102445); a generic `Killed: 9` message alone is not evidence of a Gatekeeper block.
+
 ## Development
 
 Canonical source is in `src/`, the original artwork and extracted ring seed are in `assets/`, and pinned detector assets/licenses are in `vendor/camera/`. `dist/index.html` is generated and intentionally ignored by Git. The generated page embeds everything and is about 31 MB. No Git LFS is needed.

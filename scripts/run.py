@@ -38,7 +38,9 @@ def main():
     args = parser.parse_args()
     if not 1024 <= args.port <= 65535:
         parser.error('port must be between 1024 and 65535')
+    print('Building the offline player and verifying detector files...', flush=True)
     page = build()
+    print('Build complete. Starting the local server...', flush=True)
     url = f'http://localhost:{args.port}/'
     server = None
     try:
@@ -57,6 +59,7 @@ def main():
         print('Still Field is already running.', flush=True)
     print(f'Art player: {url}\nCamera and microphone access are controlled in the player.\nCtrl+C stops the server.', flush=True)
     if not args.no_open:
+        print('Opening the Chrome player...', flush=True)
         open_player(url, args.kiosk)
     if server:
         try:
