@@ -1,6 +1,6 @@
 (()=>{
   const art=window.StillField;if(!art)return;
-  const {PersonTracker,trackingDemo,JumpDetector,jumpingDemo}=window.StillFieldTracking;
+  const {PersonTracker,trackingDemo,JumpDetector,jumpingDemo,detectionProfile}=window.StillFieldTracking;
   const settings=window.StillFieldSettings;
   const root=document.getElementById('still-field-art'),button=root.querySelector('[data-action="camera"]');
   const demoButton=root.querySelector('[data-action="people-demo"]');
@@ -9,9 +9,11 @@
   const preview=document.getElementById('sf-camera-overlay'),ctx=preview.getContext('2d');
   const status=document.getElementById('sf-camera-status'),mirror=document.getElementById('sf-camera-mirror'),anchor=document.getElementById('sf-camera-anchor');
   const showPreview=document.getElementById('sf-camera-preview'),jumpToggle=document.getElementById('sf-camera-jumps'),tracker=new PersonTracker(),jumps=new JumpDetector();
+  const sensitivity=document.getElementById('sf-camera-sensitivity'),jumpStatus=document.getElementById('sf-jump-status');
   const sample=document.createElement('canvas');sample.width=320;sample.height=180;const sampleCtx=sample.getContext('2d');
   let stream=null,detector=null,loading=null,run=0,timer=0,active=false,displayedCount=-1,previewRaf=0,loadTimer=0;
   let demo=false,demoKind='tracking',demoStart=0,detectMillis=0;
+  let lastReport=0,trackingHz=0,landingUntil=0;
   const jumpsEnabled=()=>jumpToggle.checked&&anchor.value==='feet';
   const bundled=document.getElementById('sf-camera-assets');
   function decode(base64){const binary=atob(base64),bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);return bytes;}
@@ -31,15 +33,18 @@
     })();
     try{return await loading;}finally{loading=null;}
   }
-  function resetTracks(){tracker.clear();jumps.clear();art.clearPeople();displayedCount=-1;}
+  function resetTracks(){tracker.clear();jumps.clear();art.clearPeople();displayedCount=-1;lastReport=0;trackingHz=0;landingUntil=0;jumpStatus.textContent='Stand briefly with your head and feet visible';}
   function stop(message='Camera off'){
     run++;active=false;demo=false;clearTimeout(timer);clearTimeout(loadTimer);cancelAnimationFrame(previewRaf);
     if(stream)stream.getTracks().forEach(track=>track.stop());stream=null;
     video.pause();video.srcObject=null;sampleCtx.clearRect(0,0,sample.width,sample.height);ctx.clearRect(0,0,preview.width,preview.height);
     resetTracks();button.textContent='Use camera';demoButton.textContent='Try tracking demo';jumpDemoButton.textContent='Try jump demo';button.disabled=false;status.textContent=message;
+    jumpStatus.textContent='Jump tracking off';
   }
   function report(people){
-    const events=jumps.update(people,performance.now()/1000,jumpsEnabled());
+    const now=performance.now()/1000;
+    if(lastReport&&now>lastReport){const hz=1/(now-lastReport);trackingHz=trackingHz?trackingHz*.8+hz*.2:hz;}lastReport=now;
+    const events=jumps.update(people,now,jumpsEnabled(),sensitivity.value);
     const points=people.map(t=>{
       const jump=jumps.get(t.id),blocking=jump?.blocking===true;
       return {...PersonTracker.mapPoint(blocking?jump.base:t.box,mirror.checked,anchor.value),id:t.id,confidence:t.confidence,jumping:blocking};
@@ -49,7 +54,9 @@
     for(const event of events){
       const point=PersonTracker.mapPoint(event.box,mirror.checked,'feet');
       art.jumpImpact(point.x,point.y,event.strength*crowd,{kind:event.kind,radius:event.radius});
+      if(event.kind==='landing')landingUntil=now+2;
     }
+    jumpStatus.textContent=!jumpsEnabled()?'For jumps, select Feet / full body and enable Detect jumps':now<landingUntil?'Landing detected · broad impact + outer ring':jumps.feedback+(!demo&&trackingHz>0&&trackingHz<5?' · Tracking is slow; try a lower Render detail setting':'');
     if(points.length!==displayedCount){displayedCount=points.length;status.textContent=demo?`Demo · ${points.length} simulated people`:`Camera on · ${points.length} ${points.length===1?'person':'people'} detected`;}
   }
   function draw(){
@@ -78,11 +85,11 @@
       const desiredHeight=Math.round(320/aspect);
       if(sample.height!==desiredHeight){sample.height=desiredHeight;preview.height=Math.round(640/aspect);}
       sampleCtx.drawImage(video,0,0,sample.width,sample.height);
-      const boxes=await detector.detect(sample,20,.50);
+      const profile=detectionProfile(sensitivity.value),boxes=await detector.detect(sample,20,profile.score);
       if(!active||generation!==run)return;
       detectMillis=performance.now()-start;
       tracker.maxAge=Math.max(1.2,Math.min(3,detectMillis/1000*2+.6));
-      report(tracker.update(boxes,sample.width,sample.height,performance.now()/1000));
+      report(tracker.update(boxes,sample.width,sample.height,performance.now()/1000,profile.score));
     }catch(e){if(generation===run){stop('Camera tracking stopped. Try again or use Chrome with graphics acceleration enabled.');console.error('Person detection failed:',e);}return;}
     timer=setTimeout(()=>detect(generation),Math.max(30,(jumpsEnabled()?100:250)-(performance.now()-start)));
   }
@@ -112,6 +119,7 @@
   mirror.addEventListener('change',resetTracks);
   anchor.addEventListener('change',()=>{jumpToggle.disabled=anchor.value!=='feet';resetTracks();});
   jumpToggle.addEventListener('change',resetTracks);
+  sensitivity.addEventListener('change',resetTracks);
   jumpToggle.disabled=anchor.value!=='feet';
   showPreview.addEventListener('change',()=>{preview.hidden=!showPreview.checked;if(!showPreview.checked)ctx.clearRect(0,0,preview.width,preview.height);});
   window.addEventListener('pagehide',()=>{stop();},{once:true});
@@ -125,7 +133,7 @@
     function stepDemo(){
       if(generation!==run||!active)return;const now=performance.now()/1000,t=now-demoStart;
       const sample=(kind==='jump'?jumpingDemo:trackingDemo)(t);
-      report(tracker.update(sample.predictions,640,360,now));
+      report(tracker.update(sample.predictions,640,360,now,detectionProfile(sensitivity.value).score));
       status.textContent=kind==='jump'&&!jumpsEnabled()?'Jump demo · select Feet / full body and enable Detect jumps':`Demo · ${sample.label}`;timer=setTimeout(stepDemo,100);
     }
     stepDemo();draw();
@@ -133,7 +141,7 @@
   demoButton.addEventListener('click',()=>startDemo('tracking'));
   jumpDemoButton.addEventListener('click',()=>startDemo('jump'));
   // Read-only state and an explicit fixture path support camera-free QA.
-  window.StillFieldCamera={getState:()=>({active,demo,people:tracker.visible(performance.now()/1000).length,detectMillis}),async checkDetector(image){return(await model()).detect(image,20,.5);}};
+  window.StillFieldCamera={getState:()=>({active,demo,people:tracker.visible(performance.now()/1000).length,detectMillis,trackingHz,jumpStatus:jumpStatus.textContent}),async checkDetector(image){return(await model()).detect(image,20,detectionProfile(sensitivity.value).score);}};
   // The first launch stays camera-free. Automatic capture is an explicit saved choice.
   if(settings?.get('autoCamera'))start();
 })();

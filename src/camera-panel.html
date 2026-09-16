@@ -10,6 +10,9 @@
     </label>
     <label><input type="checkbox" id="sf-camera-preview" checked> Show camera preview</label>
     <label><input type="checkbox" id="sf-camera-jumps" checked> Detect jumps · full body</label>
+    <label>Detection sensitivity
+      <select id="sf-camera-sensitivity"><option value="standard">Standard</option><option value="sensitive" selected>More sensitive</option></select>
+    </label>
   </div>
   <div class="sf-camera-view">
     <video id="sf-camera-video" autoplay muted playsinline hidden></video>
@@ -17,5 +20,6 @@
   </div>
   <p class="sf-camera-help">Frame the full person for feet placement. The marked points map to the same positions on the artwork. Frames stay on this device and are not recorded.</p>
   <p class="sf-camera-help">Stand still for a few seconds to send gentle rings outward from your position. Moving leaves footsteps; standing rings gradually return when you stop.</p>
-  <p class="sf-camera-help">For jumps, keep the camera fixed with head and feet visible. Stand briefly before jumping in place. A clear landing creates one broad ripple. Jump detection is unavailable in the cropped-body view.</p>
+  <p class="sf-camera-help" id="sf-jump-status" role="status" aria-live="polite">Jump tracking off</p>
+  <p class="sf-camera-help">For jumps, keep the camera fixed with head and feet visible. Wait for “Ready for a jump,” then jump in place. A landing creates a broad impact and an outer ring. More sensitive helps with smaller jumps and fainter detections; use Standard if you see false triggers. Jump detection is unavailable in the cropped-body view.</p>
 </section>

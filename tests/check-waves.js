@@ -88,12 +88,27 @@ console.log('Aging footsteps, breathing transitions, empty-room stillness and bu
 
 const landings=new Field.RippleScene(96,54);
 for(let i=0;i<3600;i++){
- if(i%45===0)for(let person=0;person<4;person++)landings.disturb(.18+person*.21,.35+(person%2)*.25,2.2/2,16);
+ if(i%45===0)for(let person=0;person<4;person++)landings.landing(.18+person*.21,.35+(person%2)*.25,3/2,22);
  landings.step(1,0);
 }
 assert(landings.impacts.current.every(Number.isFinite));
 assert(Math.max(...landings.impacts.current.map(Math.abs))<4,'Repeated broad landings stay stable at maximum speed and minimum damping');
 console.log('Repeated landing-ripple stability passed.');
+
+const stomp=new Field(384,216),footstep=new Field(384,216);
+stomp.landing(.5,.5,3,20);footstep.disturb(.5,.5,1.65,6.5);
+assert(energy(stomp)>energy(footstep)*8,'Landing fills substantially more of the surface than a brisk footstep');
+const crown=108*384+224;
+assert(stomp.current[crown]>.5&&Math.abs(footstep.current[crown])<.001,'Landing has a separate, visible outer ring');
+assert(Math.max(...stomp.current.map(Math.abs))<3.01,'Landing displacement has a ceiling');
+for(let i=0;i<180;i++){stomp.step(.58,.13,0,false);footstep.step(.58,.13,0,false);}
+assert(stomp.current.every(Number.isFinite));
+assert(energy(stomp)>energy(footstep)*4,'The broader landing remains distinct as it travels');
+const untouched=new Field.RippleScene(48,27),jumped=new Field.RippleScene(48,27);
+jumped.landing(.5,.5,3,20);
+for(let i=0;i<120;i++){untouched.step(.58,.04);jumped.step(.58,.04);}
+assert.deepEqual(jumped.ambient.current,untouched.ambient.current,'Landing force never energizes the ambient central field');
+console.log('Landings have a stronger, wider impact and separate crown while ambient motion stays independent.');
 
 const {PeopleRippleSources}=require('../src/person-tracking.js');
 for(const speed of [0,1]){

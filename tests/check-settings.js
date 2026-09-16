@@ -23,6 +23,9 @@ vm.runInNewContext(fs.readFileSync('src/installation-settings.js','utf8'),contex
  assert.equal(element('sf-camera-mirror').checked,false);
  assert.equal(element('sf-auto-camera').checked,false);
  assert.equal(element('sf-camera-jumps').checked,false);
+ assert.equal(element('sf-camera-sensitivity').value,'sensitive','Existing installations get the more sensitive default');
+ element('sf-camera-sensitivity').value='standard';element('sf-camera-sensitivity').emit('change');
+ assert.equal(JSON.parse(stored).sensitivity,'standard','Detection sensitivity is saved');
  element('sf-camera-jumps').checked=true;element('sf-camera-jumps').emit('change');
  assert.equal(JSON.parse(stored).jumps,true,'Jump detection preference is saved');
  assert.equal(element('sf-camera-device').value,'unplugged-logitech','Unavailable saved input must not silently switch cameras');

@@ -45,6 +45,20 @@ class RippleField {
       }
     }
   }
+  landing(u,v,strength=2.8,radius=20){
+    if(![u,v,strength,radius].every(Number.isFinite))return;
+    const cx=Math.max(.01,Math.min(.99,u))*(this.width-1),cy=Math.max(.01,Math.min(.99,v))*(this.height-1);
+    const amp=Math.max(0,Math.min(3,strength)),r=Math.max(18,Math.min(22,radius)),extent=r*3;
+    // A large compression and a separate crown distinguish a two-foot landing
+    // from the small alternating footsteps. Both evolve in the shared solver.
+    for(let y=Math.max(1,Math.floor(cy-extent/this.stretch));y<Math.min(this.height-1,cy+extent/this.stretch);y++){
+      for(let x=Math.max(1,Math.floor(cx-extent));x<Math.min(this.width-1,cx+extent);x++){
+        const distance=Math.hypot(x-cx,(y-cy)*this.stretch),d=(distance/r)**2,band=((distance-r*1.6)/(r*.24))**2;
+        const pulse=amp*((1-d)*Math.exp(-d)+.55*(1-2*band)*Math.exp(-band)),i=y*this.width+x;
+        this.current[i]+=pulse;this.previous[i]+=pulse;
+      }
+    }
+  }
   step(speed=.45,damping=.28,drive=.2,driveEnabled=true){
     const w=this.width,h=this.height,a=this.current,b=this.previous,n=this.next;
     const c=.25+Math.max(0,Math.min(1,speed))*.35;
@@ -100,6 +114,7 @@ class RippleScene {
     this.ambientRemainder=0;
   }
   disturb(x,y,strength,radius){this.impacts.disturb(x,y,strength,radius);}
+  landing(x,y,strength,radius){this.impacts.landing(x,y,strength,radius);}
   setPeople(people,observed=false){
     this.people=people.filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.confidence>=.25).slice(0,8);
     this.roomObserved=observed;

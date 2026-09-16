@@ -51,7 +51,7 @@
     {{PHYSICS}}
     {{TRACKING}}
     {{JUMP_TRACKING}}
-    window.StillFieldTracking={PersonTracker,PeopleRippleSources,trackingDemo,JumpDetector,jumpingDemo};
+    window.StillFieldTracking={PersonTracker,PeopleRippleSources,trackingDemo,JumpDetector,jumpingDemo,detectionProfile};
     const root=document.getElementById('still-field-art'),canvas=root.querySelector('canvas');
     const image=root.querySelector('.sf-stage img'),seedImage=root.querySelector('[data-seed]');
     const status=root.querySelector('[role="status"]'),pause=root.querySelector('[data-action="pause"]');
@@ -138,9 +138,11 @@
     window.StillField={configure,setInputs,triggerWake:disturb,disturb,jumpImpact,setPeople(people){if(Array.isArray(people)){peopleInput=true;peopleSources.update(people,performance.now()/1000);}},clearPeople(){peopleInput=false;peopleSources.clear();},getPeople(){return peopleSources.positions();},pause(){playing=false;pauseLabel();},play(){playing=true;last=performance.now();pauseLabel();},getState(){return{playing,ready,time:clock,...target};},setQuality(width){if(Number.isFinite(width)){maxWidth=Math.max(640,Math.min(3840,width));resize();}},setLiveReader(reader){liveReader=typeof reader==='function'?reader:null;root.querySelector('[data-control="activity"]').disabled=!!liveReader;if(liveReader)root.querySelector('[data-value="activity"]').textContent='Live loudness';else updateControl('activity');}};
     window.addEventListener('still-field-input',e=>setInputs(e.detail));
     function jumpImpact(x,y,strength,touch){
-      if(!playing||originalView)return;
-      disturb(x,y,strength,touch);
-      if(touch?.kind==='landing')status.textContent='Landing · one broad ripple. It softens as the surface settles.';
+      if(!ready||!playing||originalView)return;
+      if(touch?.kind==='landing'){
+        field.landing(x,y,strength*(.65+target.motion),touch.radius);
+        status.textContent='Landing · a broad impact sends a strong outer ring across the surface.';
+      }else disturb(x,y,strength,touch);
     }
     function load(){
       if(ready||!image.complete||!image.naturalWidth||!seedImage.complete||!seedImage.naturalWidth)return;

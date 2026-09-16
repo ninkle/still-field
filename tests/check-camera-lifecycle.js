@@ -1,6 +1,6 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const {PersonTracker,trackingDemo}=require('../src/person-tracking.js');
-const {JumpDetector,jumpingDemo}=require('../src/jump-tracking.js');
+const {JumpDetector,jumpingDemo,detectionProfile}=require('../src/jump-tracking.js');
 class Element{
  constructor(){this.listeners={};this.checked=true;this.value='feet';this.hidden=true;this.width=640;this.height=360;this.videoWidth=640;this.videoHeight=360;this.readyState=2;this.textContent='';}
  addEventListener(type,fn){this.listeners[type]=fn;}
@@ -11,7 +11,7 @@ class Element{
 const elements=new Map(),element=id=>{if(!elements.has(id))elements.set(id,new Element());return elements.get(id);};
 const root=element('still-field-art');root.querySelector=s=>element(s);
 element('sf-camera-assets').textContent=JSON.stringify({model:{modelTopology:{},weightsManifest:[]},weights:'',tfjs:'',coco:''});
-let cameraCalls=0,resolveCamera,stops=0,clearCalls=0,lastConstraints;
+let cameraCalls=0,resolveCamera,stops=0,clearCalls=0,lastConstraints,lastDetectionScore;
 const mediaTrack={stop(){stops++;},addEventListener(){}};
 const stream={getTracks:()=>[mediaTrack],getVideoTracks:()=>[mediaTrack]};
 const art={setPeople(){},clearPeople(){clearCalls++;},jumpImpact(){}};
@@ -20,9 +20,9 @@ const context={console,performance,TextDecoder,Uint8Array,atob,PersonTracker,
   navigator:{mediaDevices:{getUserMedia(constraints){lastConstraints=constraints;cameraCalls++;return new Promise(r=>resolveCamera=r);}}},
   setTimeout:()=>1,clearTimeout(){},requestAnimationFrame:()=>1,cancelAnimationFrame(){},
   tf:{setBackend:async()=>{},ready:async()=>{},io:{fromMemory:a=>a}},
-  cocoSsd:{load:async()=>({detect:async()=>[]})},
+  cocoSsd:{load:async()=>({detect:async(image,maxBoxes,score)=>{lastDetectionScore=score;return [];}})},
 };
-context.window={StillField:art,StillFieldTracking:{PersonTracker,trackingDemo,JumpDetector,jumpingDemo},StillFieldSettings:{get:key=>key==='cameraDevice'?'selected-logitech':false,refreshDevices(){}},tf:context.tf,cocoSsd:context.cocoSsd,addEventListener(){}};
+context.window={StillField:art,StillFieldTracking:{PersonTracker,trackingDemo,JumpDetector,jumpingDemo,detectionProfile},StillFieldSettings:{get:key=>key==='cameraDevice'?'selected-logitech':false,refreshDevices(){}},tf:context.tf,cocoSsd:context.cocoSsd,addEventListener(){}};
 vm.runInNewContext(fs.readFileSync('src/camera-controller.js','utf8'),context);
 const flush=()=>new Promise(setImmediate),button=element('[data-action="camera"]');
 (async()=>{
@@ -35,6 +35,10 @@ const flush=()=>new Promise(setImmediate),button=element('[data-action="camera"]
  assert.equal(context.window.StillFieldCamera.getState().active,false);
  const start=button.emit('click');await flush();resolveCamera(stream);await start;await flush();
  assert.equal(button.textContent,'Stop camera');
+ assert.equal(lastDetectionScore,.38,'Live inference uses the more sensitive confidence threshold');
+ element('sf-camera-sensitivity').value='standard';element('sf-camera-sensitivity').emit('change');
+ await context.window.StillFieldCamera.checkDetector({});assert.equal(lastDetectionScore,.50);
+ element('sf-camera-sensitivity').value='sensitive';element('sf-camera-sensitivity').emit('change');
  await button.emit('click');assert.equal(stops,2);assert(clearCalls>0);
  assert.equal(element('sf-camera-video').srcObject,null);
  const callsBeforeDemo=cameraCalls;await element('[data-action="people-demo"]').emit('click');
